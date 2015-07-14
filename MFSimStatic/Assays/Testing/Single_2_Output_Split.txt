@@ -1,0 +1,9 @@
+// DAG Specification for Tiny
+DAGNAME (Tiny Split)
+NODE (1, DISPENSE, tris-hcl, 10, DIS1)
+EDGE (1, 2)
+NODE (2, SPLIT, 2, 1, SPLIT1)
+EDGE (2, 3)
+EDGE (2, 4)
+NODE (3, OUTPUT, output, OUT1)
+NODE (4, OUTPUT, output, OUT2)

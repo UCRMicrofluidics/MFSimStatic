@@ -1,0 +1,11 @@
+// DAG Specification for Tiny
+DAGNAME (Tiny Dag)
+NODE (1, DISPENSE, tris-hcl, 10, DIS1)
+EDGE (1, 4)
+NODE (2, DISPENSE, kcl, 10, DIS2)
+EDGE (2, 4)
+NODE (3, DISPENSE, lambda, 10, DIS2)
+EDGE (3, 4)
+NODE (4, MIX, 3, 3, MIX1)
+EDGE (4, 5)
+NODE (5, OUTPUT, output, OUT1)

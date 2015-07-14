@@ -1,0 +1,1 @@
+..\Shared\mencoder "mf://@order.txt" -mf type=png:fps=100 -ovc lavc -o  Sim\Movie_LQ.avi

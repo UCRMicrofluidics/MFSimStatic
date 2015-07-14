@@ -1,0 +1,31 @@
+ARCHNAME (Arch_15_13_B2)
+DIM (15, 13)
+// Top-left
+EXTERNAL (DETECT, 2, 2, 5, 4)
+//Top-right
+EXTERNAL (DETECT, 9, 2, 12, 4)
+//Middle-left
+EXTERNAL (DETECT, 2, 8, 5, 10)
+//Middle-right
+EXTERNAL (DETECT, 9, 8, 12, 10)
+//Bottom-left
+//EXTERNAL (DETECT, 2, 14, 5, 16)
+//Bottom-right
+//EXTERNAL (DETECT, 9, 14, 12, 16)
+Input (north, 2, 2, Plasma)
+Input (north, 4, 2, Serum)
+Input (north, 6, 2, Saliva)
+Input (north, 8, 2, Urine)
+Input (north, 10, 2, S1)
+Input (north, 12, 2, S2)
+Input (north, 14, 2, S3)
+Input (west, 2, 2, Glucose)
+Input (west, 4, 2, Lactate)
+Input (west, 6, 2, Pyruvate)
+Input (west, 8, 2, Glutamate)
+Input (west, 10, 2, R1)
+Input (west, 12, 2, R2)
+Input (south, 14, 2, R3)
+Output (east, 8, 0, output)
+FREQ (100)
+TIMESTEP (1)

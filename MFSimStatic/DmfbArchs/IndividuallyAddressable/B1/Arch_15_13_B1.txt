@@ -1,0 +1,27 @@
+ARCHNAME (Arch_15_13_B1)
+DIM (15, 13)
+
+// Top-left
+EXTERNAL (DETECT, 2, 2, 5, 4)
+//Top-right
+EXTERNAL (DETECT, 9, 2, 12, 4)
+//Middle-left
+EXTERNAL (DETECT, 2, 8, 5, 10)
+//Middle-right
+EXTERNAL (DETECT, 9, 8, 12, 10)
+//Bottom-left
+//EXTERNAL (DETECT, 2, 14, 5, 16)
+//Bottom-right
+//EXTERNAL (DETECT, 9, 14, 12, 16)
+
+Input (north, 2, 2, tris-hcl)
+Input (north, 4, 2, kcl)
+Input (north, 6, 2, bovine)
+Input (north, 8, 2, gelatin)
+Input (west, 2, 2, primer)
+Input (west, 4, 2, beosynucleotide)
+Input (west, 6, 2, amplitag)
+Input (west, 8, 2, lambda)
+Output (east, 8, 0, output)
+FREQ (100)
+TIMESTEP (1)

@@ -1,0 +1,22 @@
+ARCHNAME (Arch_FPPC2_B1)
+DIM (11, 16)
+
+Input (north, 2, 2, tris-hcl)
+Input (north, 4, 2, kcl)
+Input (north, 8, 2, bovine)
+Input (north, 10, 2, gelatin)
+Input (south, 0, 2, primer)
+Input (south, 2, 2, beosynucleotide)
+Input (south, 4, 2, amplitag)
+Input (south, 8, 2, lambda)
+Output (south, 10, 0, output)
+
+Input (north, 6, 2, wash, true)
+Output (south, 6, 0, waste, true)
+
+FREQ (100)
+TIMESTEP (1)
+
+
+//PINMAP ()
+//ROW (1,1,1,1)

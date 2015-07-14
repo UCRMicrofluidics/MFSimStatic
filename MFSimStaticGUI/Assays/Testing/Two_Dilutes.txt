@@ -1,0 +1,19 @@
+// DAG Specification for Tiny
+DAGNAME (DiluteExample)
+NODE (1, DISPENSE, tris-hcl, 10, DIS1)
+EDGE (1, 3)
+NODE (2, DISPENSE, kcl, 10, DIS2)
+EDGE (2, 3)
+NODE (3, DILUTE, 2, 1, DIL1)
+EDGE (3, 4)
+EDGE (3, 5)
+NODE (4, OUTPUT, output, OUT1)
+
+NODE (6, DISPENSE, kcl, 10, DIS3)
+EDGE (6, 5)
+NODE (5, DILUTE, 2, 1, DIL2)
+
+EDGE (5, 7)
+EDGE (5, 8)
+NODE (7, OUTPUT, output, OUT2)
+NODE (8, OUTPUT, output, OUT3)

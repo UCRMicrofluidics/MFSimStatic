@@ -1,0 +1,58 @@
+ARCHNAME (Arch_15_19_B2)
+DIM (15, 19)
+
+
+
+
+// One space between modules vertically
+// Top-left
+//EXTERNAL (DETECT, 2, 2, 5, 4)
+//Top-right
+//EXTERNAL (DETECT, 9, 2, 12, 4)
+//Middle-left
+//EXTERNAL (DETECT, 2, 8, 5, 10)
+//Middle-right
+//EXTERNAL (DETECT, 9, 8, 12, 10)
+//Bottom-left
+//EXTERNAL (DETECT, 2, 14, 5, 16)
+//Bottom-right
+//EXTERNAL (DETECT, 9, 14, 12, 16)
+
+// Zero spacing between modules vertically
+// Top-left
+EXTERNAL (DETECT, 2, 2, 5, 4)
+//Top-right
+EXTERNAL (DETECT, 9, 2, 12, 4)
+//Middle-left
+EXTERNAL (DETECT, 2, 6, 5, 8)
+//Middle-right
+EXTERNAL (DETECT, 9, 6, 12, 8)
+//Bottom-left
+EXTERNAL (DETECT, 2, 10, 5, 12)
+//Bottom-right
+EXTERNAL (DETECT, 9, 10, 12, 12)
+//Super-bottom-left
+EXTERNAL (DETECT, 2, 14, 5, 16)
+//Super-bottom-right
+EXTERNAL (DETECT, 9, 14, 12, 16)
+
+
+Input (north, 2, 2, Plasma)
+Input (north, 4, 2, Serum)
+Input (north, 6, 2, Saliva)
+Input (north, 8, 2, Urine)
+Input (north, 10, 2, S1)
+Input (north, 12, 2, S2)
+Input (north, 14, 2, S3)
+Input (west, 2, 2, Glucose)
+Input (west, 4, 2, Lactate)
+Input (west, 6, 2, Pyruvate)
+Input (west, 8, 2, Glutamate)
+Input (west, 10, 2, R1)
+Input (west, 12, 2, R2)
+Input (west, 14, 2, R3)
+Output (east, 8, 0, output)
+Input (west, 16, 0, wash, true)
+Output (east, 12, 0, waste, true)
+FREQ (100)
+TIMESTEP (1)
