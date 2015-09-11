@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------*
- *                       (c)2014, All Rights Reserved.     						*
+ *                       (c)2013, All Rights Reserved.     						*
  *       ___           ___           ___     									*
  *      /__/\         /  /\         /  /\    									*
  *      \  \:\       /  /:/        /  /::\   									*
@@ -32,7 +32,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 RickettScheduler::RickettScheduler()
 {
-	chromosome = NULL;
 	srand ( (unsigned)time ( NULL ) );
 }
 
@@ -94,7 +93,7 @@ map<AssayNode*,  unsigned> * RickettScheduler::rand_key(DAG *dag)
 	map<AssayNode*, unsigned>  *kn_assoc = new map<AssayNode*, unsigned>();
 
 	for( unsigned i = 0; i<node_list.size(); i++)
-		rands.push_back(rand() % 10000);
+		rands.push_back(i);
 
 	//shuffles the random numbers, now that I have changed random number generator it is not
 	//necessary but ensures good randomization
@@ -117,7 +116,7 @@ vector< map<AssayNode*, unsigned> *> * RickettScheduler::initialize_population(D
 
 	//pushes back the maps generated in rand_key onto a vector so that an initial population can be made.
 	vector< map<AssayNode*, unsigned> *> * init_pop = new vector< map<AssayNode*, unsigned> *> ;
-	for(int i = 0; i < A; i++)
+	for(unsigned i = 0; i < A; i++)
 		init_pop->push_back(rand_key(dag));
 
 	return init_pop;
@@ -156,7 +155,7 @@ vector< map<AssayNode*, unsigned> *> * RickettScheduler::crossover(vector< map<A
 	int cross_size = get_cross_amnt();
 
 	//for the number of times specified in get_cross_amnt() which is a percentage of intitil pop size
-	for (int number = 0; number < cross_size; number ++)
+	for(unsigned number = 0; number < cross_size; number ++)
 	{
 
 		unsigned range = ( popA->size());
@@ -248,7 +247,7 @@ vector< map<AssayNode*, unsigned> *> * RickettScheduler::crossover(vector< map<A
 
 		//crossing the values in the vectors so that the random key maps can generate a new random association
 		//for a new crossedover chromosome
-		for (unsigned i = 0; i< prior_1.size(); i++)
+		for(int i = 0; i< prior_1.size(); i++)
 		{
 			if ( ( ( i+1 ) % 4 ) == 0)
 				cross_p1[i] = prior_2[i];
@@ -342,7 +341,7 @@ vector< map<AssayNode*, unsigned> *> * RickettScheduler::reproduction(vector< ma
 /////////////////////////////////////////////////////////////////////////////////////
 void RickettScheduler::Dag_reinitialize(DAG * dag)
 {
-	for (unsigned i = 0; i < dag->allNodes.size(); i++)
+	for (int i = 0; i < dag->allNodes.size(); i++)
 	{
 		AssayNode *n = dag->allNodes.at(i);
 		n->boundedResType = UNKNOWN_RES;
@@ -361,7 +360,7 @@ void RickettScheduler::Dag_reinitialize(DAG * dag)
 		}
 	}
 	dag->storage.clear();
-	for (unsigned i = 0; i < dag->storageHolders.size(); i++)
+	for (int i = 0; i < dag->storageHolders.size(); i++)
 	{
 		AssayNode *n = dag->storageHolders.at(i);
 		delete n;
@@ -375,7 +374,7 @@ void RickettScheduler::Dag_reinitialize(DAG * dag)
 		AssayNode *c = s->children.front();
 
 		// Remove the storage from the parent
-		for (unsigned k = 0; k <= p->children.size(); k++)
+		for (int k = 0; k <= p->children.size(); k++)
 		{
 			if (p->children.at(k) == s)
 			{
@@ -386,7 +385,7 @@ void RickettScheduler::Dag_reinitialize(DAG * dag)
 		p->children.push_back(c);
 
 		// Remove the storage from the child
-		for (unsigned k = 0; k <= c->parents.size(); k++)
+		for (int k = 0; k <= c->parents.size(); k++)
 		{
 			if (c->parents.at(k) == s)
 			{
@@ -407,9 +406,12 @@ void RickettScheduler::Dag_reinitialize(DAG * dag)
 /////////////////////////////////////////////////////////////////////////////////////
 unsigned long long RickettScheduler::schedule(DmfbArch *arch, DAG *dag)
 {
-
+	ElapsedTimer timeoutTime("Scheduling Time");
+	timeoutTime.startTimer();
 	int num_generations = get_num_generations();
 	int count = 0;
+	int bestTS;
+	bool firstFlag = true;
 
 	vector< map<AssayNode*, unsigned> *> * init_pop = NULL;
 	vector< map<AssayNode*, unsigned> *> * rep_pop = NULL;
@@ -422,13 +424,25 @@ unsigned long long RickettScheduler::schedule(DmfbArch *arch, DAG *dag)
 	ls.setMaxStoragePerModule(getMaxStoragePerModule());
 	ls.setPrioritiesExternally(); // RickettScheduler will set the priorities itself
 
-	int pop_size = 20;
+	int pop_size = get_init_pop();
 	Dag_reinitialize(dag); //reinitialize the dag so that it does not contain storage nodes
 	init_pop = initialize_population(dag, pop_size ); //create the initial population
 
 	// Generations loop
+	cout << "Generations complete: ";
+	unsigned lastPercentage = 150; // Some unreachable number
 	while(count < num_generations)
 	{
+		// It's nice to have some visual feedback so user knows program not hanging
+		if ((100 * (count+1) / num_generations) % 5 == 0)
+		{
+			if (lastPercentage != (100 * (count+1) / num_generations))
+			{
+				lastPercentage = (100 * (count+1) / num_generations);
+				cout << lastPercentage << "% " << flush;
+			}
+		}
+
 		//turn into proper schedules:
 		vector< map<AssayNode*, unsigned> *>::iterator iter = init_pop->begin();
 		int inner_count = init_pop->size();
@@ -446,7 +460,20 @@ unsigned long long RickettScheduler::schedule(DmfbArch *arch, DAG *dag)
 			//TS_time is equal to the scheduled value in list_sheduler::schedule
 			//done using a "     " approach
 			int TS_time = ls.schedule(arch, dag);
-
+			if(firstFlag == true)
+			{
+				//bestTS = TS_time;
+				//cout<<"best TS rickett: "<<bestTS<<flush<<endl;
+				firstFlag = false;
+			}
+			else
+			{
+				if(TS_time < bestTS)
+				{
+					//bestTS = TS_time;
+					//cout<<"best TS rickett: "<<bestTS<<flush<<endl;
+				}
+			}
 			tempor->push_back(TS_time);
 			T++;
 			iter++;
@@ -489,7 +516,6 @@ unsigned long long RickettScheduler::schedule(DmfbArch *arch, DAG *dag)
 		// init_pop clear just in case
 		init_pop->clear();
 
-
 		//inserts into new_pop all of the subset populations from reproduction, crossover and mutation
 		init_pop->insert( init_pop->end(), rep_pop->begin(), rep_pop->end() );
 		init_pop->insert( init_pop->end(), cross_pop->begin(), cross_pop->end() );
@@ -501,8 +527,18 @@ unsigned long long RickettScheduler::schedule(DmfbArch *arch, DAG *dag)
 
 		//init_pop = new_pop;
 		count ++;
-	}
+		timeoutTime.endTimer();
+		double checkTime = timeoutTime.getElapsedTimeNS();
 
+		//cerr<<"CheckTime rickett is: "<<checkTime<<flush<<endl; //To view the runtime, uncomment this.
+
+		if(checkTime > 1.8e+12)
+		{
+			goto timeOut;
+		}
+	}
+timeOut:
+	cout << endl;
 	int less = tempor->at(0);
 	int less_loc = 0;
 	//finds the shortest schedule time and the location of that schedule in the population so that

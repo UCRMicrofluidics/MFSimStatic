@@ -68,7 +68,7 @@ void FDLScheduler::recursiveCPD(DmfbArch *arch, AssayNode *node, unsigned childD
 
 	if (node->GetType() == DISPENSE)
 	{
-		node->cycles = arch->getInput(node->portName)->getTimeInSec() * arch->getFreqInHz();
+		node->cycles = arch->getIoPort(node->portName)->getTimeInSec() * arch->getFreqInHz();
 	}
 
 	unsigned temp = max(node->priority, childDist + node->cycles);

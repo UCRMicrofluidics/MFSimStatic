@@ -23,9 +23,9 @@
 #define _ASSAY_NODE_H
 
 using namespace std;
-#include "../Models/reconfig_module.h"
-#include "../Models/fixed_module.h"
-#include "../Models/io_port.h"
+#include "reconfig_module.h"
+#include "fixed_module.h"
+#include "io_port.h"
 #include "droplet.h"
 #include <iostream>
 #include <stdlib.h>
@@ -117,6 +117,7 @@ class AssayNode : public Entity
 		friend class RealTimeEvalListScheduler;
 		friend class GrissomFppcPathScheduler;
 		friend class GrissomFppcScheduler;
+		friend class GenetPathScheduler;
 		friend class RickettScheduler;
 		friend class GenetScheduler;
 		friend class ListScheduler;
@@ -127,7 +128,6 @@ class AssayNode : public Entity
 		friend class GrissomPathBinder;
 		friend class GrissomLEBinder;
 		friend class KamerLlPlacer;
-		friend class SAPlacer;
 		friend class Placer;
 
 		friend class PostSubproblemCompactionRouter;
@@ -136,11 +136,10 @@ class AssayNode : public Entity
 		friend class GrissomFppcParallelRouter;
 		friend class GrissomFixedPlaceRouter;
 		friend class RoyMazeRouter;
-		friend class AStarRouter;
+		friend class CDMAFullRouter;
 		friend class BioRouter;
 		friend class ChoRouter;
 		friend class LeeRouter;
-		friend class SkyCalRouter;
 
 		friend class Test;
 };

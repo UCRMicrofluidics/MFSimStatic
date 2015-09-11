@@ -24,6 +24,7 @@
 using namespace std;
 #include <fstream>
 #include <string>
+#include <cstdio>
 
 class Util
 {
@@ -37,5 +38,8 @@ class Util
 		static string StringToLower(string strToConvert);
 		static string TrimString(string str);
 		static int CountSubstring(const string& str, const string& sub);
+
+		// Parsing Methods
+		static char* itoa(int value, char* str, int base); // Only works in base 10
 };
 #endif

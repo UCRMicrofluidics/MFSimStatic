@@ -54,7 +54,8 @@ PathFinderWireRouter::PathFinderWireRouter(DmfbArch *dmfbArch)
 ///////////////////////////////////////////////////////////////////////////////////
 PathFinderWireRouter::~PathFinderWireRouter()
 {
-	unsigned max_layers = layers.size();
+	//cout << "DESTROYING PATH FINDER WIRE ROUTER..." << endl;
+	/*unsigned max_layers = layers.size();
 	int i = 0;
 	while(!layers.empty()) {
 		vector<Path*>* current_layer = &layers.back();
@@ -68,6 +69,14 @@ PathFinderWireRouter::~PathFinderWireRouter()
 			j++;
 		}
 		i++;
+	}*/
+	for(int i = 0; i < layers.size(); ++i)
+	{
+		for(int j = 0; j < layers.at(i).size(); ++j)
+		{
+			delete layers.at(i).at(j);
+		}
+		layers.at(i).clear();
 	}
 }
 
@@ -77,7 +86,7 @@ PathFinderWireRouter::~PathFinderWireRouter()
 // access to the pin activations list in case this algorithm needs to modify the
 // pin-mapping itself.  This algorithm uses lee's maze routing.
 ///////////////////////////////////////////////////////////////////////////////////
-void PathFinderWireRouter::computeWireRoutes(vector<vector<int> *> *pinActivations)
+void PathFinderWireRouter::computeWireRoutes(vector<vector<int> *> *pinActivations, bool isIterative)
 {
 	cout << "Beginning wire routing phase:" << endl;
 	layeredPathfinder(model);
@@ -99,9 +108,34 @@ void PathFinderWireRouter::computeWireRoutes(vector<vector<int> *> *pinActivatio
 	////////////////////////////////////////////////
 	// Convert results to the actual wire segments//
 	////////////////////////////////////////////////
-	convertWireSegments(&layers,wires);
+	if (!isIterative)
+		convertWireSegments(&layers,wires);
 }
 
+//void PathFinderWireRouter::computeWireRoutesTest()
+//{
+//	cout << "Beginning wire routing phase:" << endl;
+//	layeredPathfinder(model);
+//
+//	maxPinNum = 0;
+//	map<int, vector<WireRouteNode *> *>::iterator groupIt;
+//	for (groupIt = model->getPinGroups()->begin();groupIt != model->getPinGroups()->end();groupIt++)
+//		if (maxPinNum == 0 || groupIt->first > maxPinNum)
+//			maxPinNum = groupIt->first;
+//	maxPinNum++;
+//
+//	vector< vector<WireSegment *> *> *wires = arch->getWireRouter()->getWireRoutesPerPin();
+//	for (int i = 0; i < maxPinNum; i++)
+//	{
+//		vector<WireSegment *> *wire = new vector<WireSegment *>();
+//		wires->push_back(wire);
+//	}
+//
+//	////////////////////////////////////////////////
+//	// Convert results to the actual wire segments//
+//	////////////////////////////////////////////////
+//	//convertWireSegments(&layers,wires);
+//}
 ///////////////////////////////////////////////////////////////////////////////////
 // This function takes in the layers that contain paths (the internal representation
 // in this wire-router) and converts them to the wire segments needed by the
@@ -238,16 +272,19 @@ void PathFinderWireRouter::layeredPathfinder(DiagonalWireRoutingModel* model)
 		clearHistory(&allNodes);
 
 		// Timer code for individual layers
-			char timerName[1024];
-			sprintf(timerName,"Layer %d",layer_number);
-			ElapsedTimer sTime(timerName);
-			sTime.startTimer();
-		pathfinder(allNodes,pinGroups,super_escape); 
+		char timerName[1024];
+		sprintf(timerName,"Layer %d",layer_number);
+		ElapsedTimer sTime(timerName);
+		sTime.startTimer();
+		pathfinder(allNodes,pinGroups,super_escape);
 		// Timer code for individual layers
-			sTime.endTimer();
-			cout << endl;
-			sTime.printElapsedTime();
-		if (layers.back().empty()) return;
+		sTime.endTimer();
+		cout << endl;
+		sTime.printElapsedTime();
+
+		if (layers.back().empty())
+			return;
+
 		Sort::sortPathsBySharedPinSize(&layers.back());
 
 		vector<Path*>::iterator path_iter = (layers.back()).begin();
@@ -272,7 +309,7 @@ void PathFinderWireRouter::layeredPathfinder(DiagonalWireRoutingModel* model)
 				pinGroups.erase((*path_iter)->getPinNumber());
 			}
 		}
-		if (kCleanRoute) 
+		if (kCleanRoute)
 		{
 			cerr << "Cleaning up layer " << layer_number << "..." << endl;
 			layers.pop_back();
@@ -304,11 +341,11 @@ void PathFinderWireRouter::layeredPathfinder(DiagonalWireRoutingModel* model)
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Tests whether new_path intersects with any path contained in old_paths
-// vector. 
+// vector.
 // Returns: vector of intersecting indices
 ///////////////////////////////////////////////////////////////////////////////////
 vector<int> intersecting_paths(Path* new_path,vector<Path>* old_paths)
-{
+		{
 	vector<int> intersecting_indices;
 	vector<WireRouteNode*> shared_nodes;
 	for (unsigned i = 0;i < new_path->pathSize();i++) {
@@ -331,7 +368,7 @@ vector<int> intersecting_paths(Path* new_path,vector<Path>* old_paths)
 		}
 	}
 	return intersecting_indices;
-}
+		}
 
 ///////////////////////////////////////////////////////////////////////////////////
 // This function calls path-finder on each of the pinGroups
@@ -382,8 +419,19 @@ void PathFinderWireRouter::pathfinder(vector<WireRouteNode*> allNodes, map<int, 
 				}
 
 			if (current_layer.size() > best_layer.size())
+			{
+				//(ZZ): Change made to prevent memory leaks (9/11/2014)
+				while(!best_layer.empty())
+				{
+					delete best_layer.back();
+					best_layer.pop_back();
+				}
+				//End of changes
 				best_layer = current_layer;
+			}
 			current_layer.clear();
+
+
 		}
 
 		failed_routes = 0;
@@ -405,8 +453,14 @@ void PathFinderWireRouter::pathfinder(vector<WireRouteNode*> allNodes, map<int, 
 			current_node->iteration = -1;
 			current_node->claimedPin = -1;
 			current_node->spawn = NULL;
+
+			//(ZZ): Change made to prevent memory leaks
+			clearPaths(&paths, &best_layer);
+			//End of changes
 			paths.clear();
+
 		}
+
 		//Route everything, one route at a time, updating occupancy throughout.
 		for (int i = 0; i < sortedPinGroups->size(); i++)
 		{
@@ -419,6 +473,9 @@ void PathFinderWireRouter::pathfinder(vector<WireRouteNode*> allNodes, map<int, 
 			int shared = 0;
 			if (new_path->empty())
 			{
+				//(ZZ): Changed to prevent memory Leaks (9/11/2014)
+				delete new_path;
+				// end of changes
 				failed_routes++;
 				std::cerr << "Error: Pathfinder: Could not find a route for pin group " << pinNum << ".\n";
 			}
@@ -428,7 +485,7 @@ void PathFinderWireRouter::pathfinder(vector<WireRouteNode*> allNodes, map<int, 
 					if (new_path->nodeAt(i)->nodeType != SUPER_ESCAPE_WRN && new_path->nodeAt(i)->occupancy > 1)
 						shared++;
 
-				if (shared > 1)
+				if (shared >= 1)
 					failed_routes++;
 
 				new_path->setCost(new_path->pathSize());
@@ -462,7 +519,12 @@ void PathFinderWireRouter::pathfinder(vector<WireRouteNode*> allNodes, map<int, 
 	if (best_layer.empty())
 		layers.push_back(paths);
 	else
+	{
 		layers.push_back(best_layer);
+		//(ZZ): Changed to prevent memory leaks (9/11/2014)
+		clearPaths(&paths, &best_layer);
+		// End of changes
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -601,6 +663,9 @@ bool PathFinderWireRouter::traceBack(double pfac,WireRouteNode* sink,Path* sourc
 	}
 
 	append(sources,&path);
+	//Added to prevent memory leaks (ZZ) 9/24/2014
+	path.clear();
+	//end of changes
 	return true;
 }
 
@@ -646,7 +711,7 @@ struct CompareNodes
 };
 
 //TODO: debugging only
-int sink_distance(WireRouteNode* n1,vector<WireRouteNode*>* sinks) { 
+int sink_distance(WireRouteNode* n1,vector<WireRouteNode*>* sinks) {
 	int min_distance = -1;
 	for (unsigned i = 0;i < sinks->size();i++) {
 		int dist = distance(n1,sinks->at(i));
@@ -658,7 +723,7 @@ int sink_distance(WireRouteNode* n1,vector<WireRouteNode*>* sinks) {
 }
 
 int distance(WireRouteNode* n1,WireRouteNode* n2) {
-	int dist = abs(n2->wgX - n1->wgX) + abs(n2->wgY - n1->wgY); 
+	int dist = abs(n2->wgX - n1->wgX) + abs(n2->wgY - n1->wgY);
 	return dist;
 }
 ///////////////////////////////////////////////////////////////////////////////////
@@ -781,4 +846,28 @@ void PathFinderWireRouter::clearHistory(vector<WireRouteNode*>* allNodes)
 {
 	for (unsigned i = 0;i < allNodes->size();i++)
 		allNodes->at(i)->history_cost = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Clears all but the elements in best_layer from paths
+///////////////////////////////////////////////////////////////////////////////
+void PathFinderWireRouter::clearPaths(vector<Path*>* paths, vector<Path*>* best_layer)
+{
+	for(int i = 0; i < paths->size(); ++i)
+	{
+		bool good = true;
+		for(int j = 0; j < best_layer->size(); ++j)
+		{
+			if(paths -> at(i) == best_layer -> at(j))
+			{
+				good = false;
+				break;
+			}
+
+		}
+		if(good)
+		{
+			delete paths -> at(i);
+		}
+	}
 }

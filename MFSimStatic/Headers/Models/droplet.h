@@ -57,6 +57,5 @@ class Droplet : Entity
 		friend class RoyRouter;
 		friend class Router;
 		friend class GrissomFppcRouter;
-		friend class SkyCalRouter;
 };
 #endif /* DROPLET_H_ */

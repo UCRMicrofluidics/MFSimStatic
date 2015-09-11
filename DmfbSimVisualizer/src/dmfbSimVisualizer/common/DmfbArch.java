@@ -28,6 +28,7 @@
 package dmfbSimVisualizer.common;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 public class DmfbArch {
 	String name;

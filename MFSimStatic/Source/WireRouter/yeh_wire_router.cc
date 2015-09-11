@@ -40,6 +40,11 @@
 //const unsigned PathFinderWireRouter::kMaxIterations = 30;
 //const bool PathFinderWireRouter::SaveBest = true;
 
+YehWireRouter::YehWireRouter()
+{
+	arch = NULL;
+	type = YEH_WR;
+}
 ///////////////////////////////////////////////////////////////////////////////////
 // Constructor
 ///////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +67,7 @@ YehWireRouter::~YehWireRouter()
 // access to the pin activations list in case this algorithm needs to modify the
 // pin-mapping itself.  This algorithm uses lee's maze routing.
 ///////////////////////////////////////////////////////////////////////////////////
-void YehWireRouter::computeWireRoutes(vector<vector<int> *> *pinActivations)
+void YehWireRouter::computeWireRoutes(vector<vector<int> *> *pinActivations, bool isIterative)
 {
 	cout << "Beginning wire routing phase:" << endl;
 	layeredYeh(model);
@@ -84,8 +89,34 @@ void YehWireRouter::computeWireRoutes(vector<vector<int> *> *pinActivations)
 	////////////////////////////////////////////////
 	// Convert results to the actual wire segments//
 	////////////////////////////////////////////////
-	convertWireSegments(&layers,wires);
+	if (!isIterative)
+		convertWireSegments(&layers,wires);
 }
+
+//void YehWireRouter::computeWireRoutesTest()
+//{
+//	cout << "Beginning wire routing phase:" << endl;
+//	layeredYeh(model);
+//
+//	maxPinNum = 0;
+//	map<int, vector<WireRouteNode *> *>::iterator groupIt;
+//	for (groupIt = model->getPinGroups()->begin();groupIt != model->getPinGroups()->end();groupIt++)
+//		if (maxPinNum == 0 || groupIt->first > maxPinNum)
+//			maxPinNum = groupIt->first;
+//	maxPinNum++;
+//
+//	vector< vector<WireSegment *> *> *wires = arch->getWireRouter()->getWireRoutesPerPin();
+//	for (int i = 0; i < maxPinNum; i++)
+//	{
+//		vector<WireSegment *> *wire = new vector<WireSegment *>();
+//		wires->push_back(wire);
+//	}
+//
+//	////////////////////////////////////////////////
+//	// Convert results to the actual wire segments//
+//	////////////////////////////////////////////////
+//	//convertWireSegments(&layers,wires);
+//}
 
 ///////////////////////////////////////////////////////////////////////////////////
 // This function takes in the layers that contain paths (the internal representation
@@ -196,7 +227,19 @@ void YehWireRouter::layeredYeh(DiagonalWireRoutingModel* model)
 			current_node->claimedPin = -1;
 			current_node->spawn = NULL;
 		}
+
+		// Timer code for individual layers
+		char timerName[1024];
+		sprintf(timerName,"Layer %d",layer_number);
+		ElapsedTimer sTime(timerName);
+		sTime.startTimer();
+
 		yeh_iccad_routing(allNodes,pinGroups,super_escape);
+
+		// Timer code for individual layers
+		sTime.endTimer();
+		sTime.printElapsedTime();
+
 		cout << layers.back().size() << " pins routed." << endl;
 		if (layers.back().empty()) {
 			cerr << "No new routes routed." << endl;
@@ -297,6 +340,7 @@ vector<int> YehWireRouter::intersecting_pins(Path* new_path,vector<Path*>* old_p
 void YehWireRouter::yeh_iccad_routing(vector<WireRouteNode*> allNodes, map<int, vector<WireRouteNode*>* > pinGroups, 
 		WireRouteNode* super_escape) 
 {
+	bool sharingAllowed = false;
 	vector<Path*> paths;
 	int failed_routes = pinGroups.size();
 
@@ -316,10 +360,11 @@ void YehWireRouter::yeh_iccad_routing(vector<WireRouteNode*> allNodes, map<int, 
 		int pinNum = pinGroup.front()->originalPinNum;
 
 		//Attempt to route the pin without intersections
-		changeSharing(&paths,false/*disAllows Sharing*/);
+		//changeSharing(&paths,false/*disAllows Sharing*/);
 		/* 0 pfac, 0 iteration */
+		sharingAllowed = false;
 		Path* new_path = new Path();
-		leeMazeRouting(pinNum,0,super_escape,pinGroup,0,new_path);
+		leeMazeRouting(pinNum,0,super_escape,pinGroup,0,new_path, sharingAllowed);
 
 		super_escape->claimedPin = -1;
 		bool pinFailed = false;
@@ -328,10 +373,15 @@ void YehWireRouter::yeh_iccad_routing(vector<WireRouteNode*> allNodes, map<int, 
 			vector<int> black_listed_pins;
 			while (attemptReroute) {
 				// Reroute the current pin, allowing intersections
-				changeSharing(&paths,true/*Allows Sharing*/);
-				leeMazeRouting(pinNum,0,super_escape,pinGroup,0,new_path);
+				//changeSharing(&paths,true/*Allows Sharing*/);
+				sharingAllowed = true;
+				leeMazeRouting(pinNum,0,super_escape,pinGroup,0,new_path, sharingAllowed);
 				// Find which pins it intersects with.
 				vector<int> pin_conflicts = intersecting_pins(new_path,&paths);
+				if(pin_conflicts.empty())
+				{
+					break;
+				}
 				// Add pins it intersects with to black list
 				for (unsigned i = 0;i < pin_conflicts.size() && !pinFailed;i++) {
 					for (unsigned j = 0;j < black_listed_pins.size() && !pinFailed;j++) {
@@ -360,38 +410,51 @@ void YehWireRouter::yeh_iccad_routing(vector<WireRouteNode*> allNodes, map<int, 
 							}
 						}
 					}
-					changeSharing(&paths,false/*disAllows Sharing*/);
+					//changeSharing(&paths,false/*disAllows Sharing*/);
+					sharingAllowed = false;
 					// Re route all pins (in order)
 					for (unsigned i = 0;i < pin_conflicts.size();i++) {
 						int reroute_pin = pin_conflicts.at(i);
 						vector<WireRouteNode*> reRouteGroup = *(pinGroups.at(reroute_pin));
 						Path* reRoutePath = new Path();
-						leeMazeRouting(reroute_pin,0,super_escape,reRouteGroup,0,reRoutePath);
+						leeMazeRouting(reroute_pin,0,super_escape,reRouteGroup,0,reRoutePath, sharingAllowed);
 						if (!reRoutePath->empty()) {
 							reRoutePath->setCost(reRoutePath->pathSize());
 							reRoutePath->setSharedNodes(0);
 							reRoutePath->setPinNumber(reroute_pin);
-							reRoutePath->disallowSharing();
+							//reRoutePath->disallowSharing();
 							paths.push_back(reRoutePath);
 						} else {
 					 		// Any that fail get pushed to later layer
 							// By not adding them back to paths, they should be
 							// pushed to later
+							delete reRoutePath;
 						}
 					}
 					delete new_path;
 					new_path = new Path();
-					leeMazeRouting(pinNum,0,super_escape,pinGroup,0,new_path);
+					leeMazeRouting(pinNum,0,super_escape,pinGroup,0,new_path, sharingAllowed);
 					if (new_path->empty()) { attemptReroute = true; }
 					else { attemptReroute = false; }
 				}
+				/*else{
+					delete new_path;
+					new_path = new Path();
+				}*/
 			}
 		}
-		new_path->setCost(new_path->pathSize());
-		new_path->setSharedNodes(0);
-		new_path->setPinNumber(pinNum);
-		new_path->disallowSharing(); //Simply sets iteration to 1 for all nodes on the path
-		paths.push_back(new_path);
+		if(!new_path->empty())
+		{
+			new_path->setCost(new_path->pathSize());
+			new_path->setSharedNodes(0);
+			new_path->setPinNumber(pinNum);
+			new_path->disallowSharing(); //Simply sets iteration to 1 for all nodes on the path
+			paths.push_back(new_path);
+		}
+		else
+		{
+			delete new_path;
+		}
 	}
 	cout << endl; //Outputs a new line after the "."'s
 	layers.push_back(paths);
@@ -415,25 +478,25 @@ void YehWireRouter::printPath(vector<WireRouteNode*>* path)
 // 		* Traceback from the sink found to the current path (originally just the source)
 ///////////////////////////////////////////////////////////////////////////////////
 //Path YehWireRouter::leeMazeRouting(int pin_number,double pfac,WireRouteNode* source, vector<WireRouteNode*> sinks, int iterationNum)
-void YehWireRouter::leeMazeRouting(int pin_number,double pfac,WireRouteNode* source, vector<WireRouteNode*> sinks, int iterationNum,Path* new_path)
+void YehWireRouter::leeMazeRouting(int pin_number,double pfac,WireRouteNode* source, vector<WireRouteNode*> sinks, int iterationNum,Path* new_path, bool sharingAllowed)
 {
 	for (unsigned i = 0;i < sinks.size();i++) {
 		WireRouteNode* current = sinks.at(i);
 		current->iteration = -1;
 	}
 	WireRouteNode* sink_found;
-	vector<WireRouteNode*> nodes_found;
+	vector<WireRouteNode*>* nodes_found;
 	new_path->addPathSegment(source);
 	bool failed = false;
 	int sink_number = 1;
 	int max_sinks = sinks.size();
 	while (!sinks.empty() && !failed)
 	{
-		nodes_found = fillGrid(pin_number,pfac,new_path,&sinks);
-		if (!nodes_found.empty())
+		nodes_found = fillGrid(pin_number,pfac,new_path,&sinks, sharingAllowed);
+		if (!nodes_found->empty())
 		{
-			sink_found = nodes_found.back();
-			nodes_found.pop_back();
+			sink_found = nodes_found->back();
+			nodes_found->pop_back();
 			sink_found->claimedPin = pin_number;
 			if (!traceBack(pfac,sink_found,new_path, iterationNum))
 			{
@@ -450,24 +513,33 @@ void YehWireRouter::leeMazeRouting(int pin_number,double pfac,WireRouteNode* sou
 				}
 			}
 			//Clear the iterations of nodes found.
-			for (unsigned i = 0;i < nodes_found.size();i++)
+			for (unsigned i = 0;i < nodes_found->size();i++)
 			{
-				nodes_found.at(i)->iteration = -1;//Clear the iteration found at.
-				nodes_found.at(i)->spawn = NULL;//Clear the spawning node.
+				nodes_found->at(i)->iteration = -1;//Clear the iteration found at.
+				nodes_found->at(i)->spawn = NULL;//Clear the spawning node.
 			}
+			nodes_found->clear();
 		} else {
 			failed = true;
 		}
 		sink_number++;
 	}
 	if (failed) {
-		for (unsigned i = 0;i < nodes_found.size();i++) {
-			nodes_found.at(i)->iteration = -1;//Clear the iteration found at.
-			nodes_found.at(i)->spawn = NULL;//Clear the spawning node.
+		for (unsigned i = 0;i < nodes_found->size();i++) {
+			nodes_found->at(i)->iteration = -1;//Clear the iteration found at.
+			nodes_found->at(i)->spawn = NULL;//Clear the spawning node.
 		}
+		nodes_found->clear();
 		// clear the path to return an empty path
-		delete new_path;
-		new_path = new Path();
+		//delete new_path;
+		//new_path = new Path();
+
+		new_path->clear();
+		//delete new_path
+	}
+	if(nodes_found)
+	{
+		delete nodes_found;
 	}
 }
 
@@ -532,6 +604,7 @@ bool YehWireRouter::traceBack(double pfac,WireRouteNode* sink,Path* sources, int
 	sources->removeSuper();
 
 	append(sources,path);
+	path->clear();
 	return true;
 }
 
@@ -579,17 +652,31 @@ struct CompareNodes
 // 	On Failure: an empty vector, with all visited WireRouteNodes iteration
 // 			value reset to 0 (as if they were never visited).*/
 ///////////////////////////////////////////////////////////////////////////////////
-vector<WireRouteNode*> YehWireRouter::fillGrid(int pin_number,double pfac,Path* sources,vector<WireRouteNode*>* sinks)
+vector<WireRouteNode*>* YehWireRouter::fillGrid(int pin_number,double pfac,Path* sources,vector<WireRouteNode*>* sinks, bool sharingAllowed)
 {
-	vector<WireRouteNode*> searched_nodes;
+	vector<WireRouteNode*>* searched_nodes = new vector<WireRouteNode*>();
 
 	/* Set up the expanding wavefront */
 	priority_queue<WireRouteNode*, vector<WireRouteNode*>, CompareNodes>* wavefront =
 			new priority_queue<WireRouteNode*, vector<WireRouteNode*>, CompareNodes>;
+	//cout << "Filling..." << endl;
+	for(unsigned i = 0; i < sources->pathSize(); ++i)
+	{
+		PathSegment* current_segment = sources->segmentAt(i);
+		if(current_segment == NULL)
+		{
+			sources ->clear();
+			sources->addPathSegment(model->getSuperEscape());
+			break;
+		}
+
+	}
 	for (unsigned i = 0;i < sources->pathSize();i++)
 	{
+		//cout << "Pushing (" << sources->nodeAt(i) -> wgX << ", " << sources->nodeAt(i)->wgY << ")" << endl;
 		wavefront->push(sources->nodeAt(i));
-		searched_nodes.push_back(sources->nodeAt(i));
+		//cout << "Pushing (" << sources->nodeAt(i) -> wgX << ", " << sources->nodeAt(i)->wgY << ")" << endl;
+		searched_nodes->push_back(sources->nodeAt(i));
 		sources->nodeAt(i)->iteration = 1;
 	}
 	int min_distance = -1;
@@ -606,7 +693,7 @@ vector<WireRouteNode*> YehWireRouter::fillGrid(int pin_number,double pfac,Path* 
 			WireRouteNode* expanse = current_node->neighbors.at(i);
 			if ( (expanse->nodeType != SUPER_ESCAPE_WRN) )
 			{
-				if (expanse->iteration <= 0)
+				if (expanse->iteration <= 0 && (expanse->occupancy <= 0 || sharingAllowed))
 				{
 					/* Expand the node */
 					int sink_index = isSink(expanse,sinks);
@@ -614,7 +701,13 @@ vector<WireRouteNode*> YehWireRouter::fillGrid(int pin_number,double pfac,Path* 
 					{
 						expanse->iteration = current_node->iteration + 1;
 						expanse->spawn = current_node;
-						searched_nodes.push_back(sinks->at(sink_index));
+						searched_nodes->push_back(sinks->at(sink_index));
+						//cout << "Success." << endl;
+						while(!wavefront->empty())
+						{
+							wavefront->pop();
+						}
+						delete wavefront;
 						return searched_nodes;
 					}
 					else
@@ -624,21 +717,23 @@ vector<WireRouteNode*> YehWireRouter::fillGrid(int pin_number,double pfac,Path* 
 							expanse->iteration = current_node->iteration + 1;
 							expanse->spawn = current_node;
 							wavefront->push(expanse);
-							searched_nodes.push_back(expanse);
+							searched_nodes->push_back(expanse);
 						}
 					}
 				}
 			}
 		}
 	}
+	//cout << "Failed." << endl;
 	// Sink node could not be found, Yeh's will attempt to rip and reroute
 	// Clear the searched nodes since sink was not found
-	for (unsigned i = 0;i < searched_nodes.size();i++)
+	for (unsigned i = 0;i < searched_nodes->size();i++)
 	{
-		searched_nodes.at(i)->iteration = -1;//Clear the iteration found at.
-		searched_nodes.at(i)->spawn = NULL;
+		searched_nodes->at(i)->iteration = -1;//Clear the iteration found at.
+		searched_nodes->at(i)->spawn = NULL;
 	}
-	searched_nodes.clear();
+	searched_nodes->clear();
+	delete wavefront;
 
 	return searched_nodes;
 }

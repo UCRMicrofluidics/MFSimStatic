@@ -34,6 +34,7 @@
 #include "../Headers/Scheduler/grissom_fppc_path_scheduler.h"
 #include "../Headers/Scheduler/list_scheduler_rt_eval.h"
 #include "../Headers/Scheduler/grissom_fppc_scheduler.h"
+#include "../Headers/Scheduler/genet_path_scheduler.h"
 #include "../Headers/Scheduler/rickett_scheduler.h"
 #include "../Headers/Scheduler/genet_scheduler.h"
 #include "../Headers/Scheduler/list_scheduler.h"
@@ -44,7 +45,6 @@
 #include "../Headers/Placer/grissom_left_edge_binder.h"
 #include "../Headers/Placer/grissom_path_binder.h"
 #include "../Headers/Placer/kamer_ll_placer.h"
-#include "../Headers/Placer/sa_placer.h"
 #include "../Headers/Placer/placer.h"
 
 #include "../Headers/Router/grissom_fixed_place_map_router.h"
@@ -53,11 +53,10 @@
 #include "../Headers/Router/grissom_fppc_sequential_router.h"
 #include "../Headers/Router/roy_maze_router.h"
 #include "../Headers/Router/bioroute_router.h"
-#include "../Headers/Router/a_star_router.h"
-#include "../Headers/Router/skycal_router.h"
 #include "../Headers/Router/lee_router.h"
 #include "../Headers/Router/cho_router.h"
 #include "../Headers/Router/router.h"
+#include "../Headers/Router/cdma_full_router.h"
 
 #include "../Headers/WireRouter/grissom_enhanced_fppc_wire_router.h"
 #include "../Headers/WireRouter/path_finder_wire_router.h"
@@ -66,6 +65,9 @@
 
 #include "../Headers/PinMapper/indiv_addr_pin_mapper.h"
 #include "../Headers/PinMapper/clique_pin_mapper.h"
+#include "../Headers/PinMapper/power_clique_pin_mapper.h"
+#include "../Headers/PinMapper/reliability_aware_pin_mapper.h"
+#include "../Headers/PinMapper/switching_aware_combined_wire_router_pin_mapper.h"
 
 ///////////////////////////////////////////////////////////////
 // Synthesis constructor. Initializes synthesis methods
@@ -234,7 +236,7 @@ void Synthesis::synthesizeDesign()
 	/////////////////////////////////////////////////////////
 	// Do compatability checks
 	/////////////////////////////////////////////////////////
-	CompatChk::PreScheduleChk(scheduler, arch, true);
+	CompatChk::PreScheduleChk(scheduler, arch, dag, true);
 
 	/////////////////////////////////////////////////////////
 	// Scheduling ///////////////////////////////////////////
@@ -363,12 +365,12 @@ void Synthesis::synthesizeDesign()
 	/////////////////////////////////////////////////////////
 	ElapsedTimer pmTime("Pin-Mapping (Post Route) Time");
 	pmTime.startTimer();
-	arch->getPinMapper()->setMapPostRoute(pinActivations);
+	arch->getPinMapper()->setMapPostRoute(pinActivations, routes);
 	pmTime.endTimer();
 	pmTime.printElapsedTime();
 
 	/////////////////////////////////////////////////////////
-	// Do compatability checks
+	// Do compatibility checks
 	/////////////////////////////////////////////////////////
 	CompatChk::PreWireRouteChk(arch, true);
 
@@ -380,7 +382,7 @@ void Synthesis::synthesizeDesign()
 	{
 		ElapsedTimer wrTime("Wire-Routing Time");
 		wrTime.startTimer();
-		arch->getWireRouter()->computeWireRoutes(pinActivations);
+		arch->getWireRouter()->computeWireRoutes(pinActivations, false);
 		wrTime.endTimer();
 		wrTime.printElapsedTime();
 	}
@@ -405,7 +407,7 @@ void Synthesis::synthesizeDesign()
 		if (CompatChk::CanPerformCompactSimulation(router))
 			FileOut::WriteCompactedRoutesToFile(dag, arch, rModules, routes, tsBeginningCycle, "Output/3_COMPACT_ROUTE_to_SIM.txt");
 	}
-	FileOut::WriteHardwareFileWithWireRoutes(arch, dir + "4_HARDWARE_DESCRIPTION.txt");
+	FileOut::WriteHardwareFileWithWireRoutes(arch, dir + "4_HARDWARE_DESCRIPTION.txt", true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -479,7 +481,7 @@ void Synthesis::Schedule(string inputDagFile, string inputArchFile, string outpu
 	Scheduler *scheduler = getNewSchedulingMethod(st);
 	scheduler->setType(st);
 	scheduler->setMaxStoragePerModule(maxStorageDropsPerMod);
-	CompatChk::PreScheduleChk(scheduler, arch, false);
+	CompatChk::PreScheduleChk(scheduler, arch, dag, false);
 
 	/////////////////////////////////////////////////////////
 	// Scheduling ///////////////////////////////////////////
@@ -532,6 +534,7 @@ void Synthesis::Place(string inputFile, string outputFile, PlacerType pt, int ce
 	//setPinMappingMethod(pmt, INHERIT_RA, arch);
 	vector<ReconfigModule *> *rModules = new vector<ReconfigModule *>();
 	FileIn::ReadScheduledDagAndArchFromFile(dag, arch, placer, inputFile);
+
 	string dir = outputFile.substr(0, outputFile.find_last_of("/")+1);
 	stringstream fName;
 	fName.str("1_" + dag->getName() + "_Sched");
@@ -660,7 +663,7 @@ void Synthesis::Route(string inputFile, RouterType rt, bool performWash, Compact
 	/////////////////////////////////////////////////////////
 	ElapsedTimer pmTime("Pin-Mapping (Post Route) Time");
 	pmTime.startTimer();
-	arch->getPinMapper()->setMapPostRoute(pinActivations);
+	arch->getPinMapper()->setMapPostRoute(pinActivations, routes);
 	pmTime.endTimer();
 	pmTime.printElapsedTime();
 
@@ -669,10 +672,11 @@ void Synthesis::Route(string inputFile, RouterType rt, bool performWash, Compact
 	// NOTE: Must run the WriteCompacted() function last b/c
 	// it deletes the routes as it goes.
 	/////////////////////////////////////////////////////////
+	FileOut::WriteHardwareFileWithWireRoutes(arch, dir + "4_HARDWARE_DESCRIPTION.txt", arch->getPinMapper()->getIsCombinedWireRouter()); // May be overwritten w/ better version later if wire-router called
 	if (et == PROG_EX || et == ALL_EX)
 	{
 		FileOut::WriteDmfbProgramToFile(routes, "Output/3_ELEC_ACTIVATIONS_COORDS.mfprog");
-		//FileOut::WriteDmfbBinaryProgramToFile(arch, pinActivations, "Output/3_PIN_ACTIVATIONS_BINARY.mfprog");
+		FileOut::WriteDmfbBinaryProgramToFile(arch, pinActivations, "Output/3_PIN_ACTIVATIONS_BINARY.mfprog");
 	}
 	if (et == SIM_EX || et == ALL_EX)
 	{
@@ -752,20 +756,26 @@ void Synthesis::WireRoute(string inputFile, WireRouteType wrt, int numHorizTrack
 	CompatChk::PreWireRouteChk(arch, false);
 
 	/////////////////////////////////////////////////////////
-	// Wire-Routing /////////////////////////////////////////
+	// Compute wire-routes from pin-mapping and pin-activations
+	// (if required)
 	/////////////////////////////////////////////////////////
-	ElapsedTimer wrTime("Wire-Routing Time");
-	wrTime.startTimer();
-	arch->getWireRouter()->computeWireRoutes(pinActivations);
-	wrTime.endTimer();
-	wrTime.printElapsedTime();
+	if (arch->getWireRouter()->hasExecutableSynthMethod())
+	{
+		ElapsedTimer wrTime("Wire-Routing Time");
+		wrTime.startTimer();
+		arch->getWireRouter()->computeWireRoutes(pinActivations, false);
+		wrTime.endTimer();
+		wrTime.printElapsedTime();
 
-	printWireRoutingStats(arch);
+		printWireRoutingStats(arch);
 
-	/////////////////////////////////////////////////////////
-	// Hardware Description file (with wire-router)
-	/////////////////////////////////////////////////////////
-	FileOut::WriteHardwareFileWithWireRoutes(arch, dir + "4_HARDWARE_DESCRIPTION.txt");
+		/////////////////////////////////////////////////////////
+		// Hardware Description file (with wire-router)
+		/////////////////////////////////////////////////////////
+		FileOut::WriteHardwareFileWithWireRoutes(arch, dir + "4_HARDWARE_DESCRIPTION.txt", true);
+	}
+	else if (wrt == NONE_WR)
+		cout << "Basic wire-routing bypassed according to synthesis flow." << endl;
 
 	/////////////////////////////////////////////////////////
 	// Cleanup
@@ -792,6 +802,8 @@ Scheduler * Synthesis::getNewSchedulingMethod(SchedulerType st)
 		return new PathScheduler();
 	else if (st == GENET_S)
 		return new GenetScheduler();
+	else if (st == GENET_PATH_S)
+		return new GenetPathScheduler();
 	else if (st == RICKETT_S)
 		return new RickettScheduler();
 	else if (st == FD_LIST_S)
@@ -802,11 +814,6 @@ Scheduler * Synthesis::getNewSchedulingMethod(SchedulerType st)
 		return new GrissomFppcPathScheduler();
 	else if (st == RT_EVAL_LIST_S)
 		return new RealTimeEvalListScheduler();
-	else if (st == SKYCAL_S)
-	{
-		Scheduler * s = new Scheduler();
-		s->setHasExecutableSynthMethod(false);
-	}
 	else
 		claim(false, "No valid scheduler type was specified.");
 }
@@ -819,17 +826,10 @@ Placer * Synthesis::getNewPlacementMethod(PlacerType pt)
 		return new GrissomLEBinder();
 	else if (pt == GRISSOM_PATH_B)
 		return new GrissomPathBinder();
-	else if (pt == SA_P)
-		return new SAPlacer();
 	else if (pt == KAMER_LL_P)
 		return new KamerLlPlacer();
 	else if (pt == FPPC_LE_B)
 		return new GrissomFppcLEBinder();
-	else if (pt == SKYCAL_P)
-	{
-		Placer* p = new Placer();
-		p->setHasExecutableSynthMethod(false);
-	}
 	else
 		claim(false, "No valid placement type was specified.");
 }
@@ -852,12 +852,10 @@ Router * Synthesis::getNewRoutingMethod(RouterType rt, DmfbArch *arch)
 		return new GrissomFppcParallelRouter(arch);
 	else if (rt == CHO_R)
 		return new ChoRouter(arch);
-	else if (rt == A_STAR_R)
-		return new AStarRouter(arch);
 	else if (rt == LEE_R)
 		return new LeeRouter(arch);
-	else if (rt == SKYCAL_R)
-		return new SkyCalRouter(arch);
+	else if (rt == CDMA_FULL_R)
+		return new CDMAFullRouter(arch);
 	else
 		claim(false, "No valid router type was specified.");
 }
@@ -874,15 +872,16 @@ void Synthesis::setWireRoutingMethod(WireRouteType wrt, DmfbArch *arch)
 		wr = new YehWireRouter(arch);
 	else if (wrt == ENHANCED_FPPC_WR)
 		wr = new EnhancedFPPCWireRouter(arch);
-	else if (wrt == NONE_WR)
+	else if (wrt == NONE_WR || PIN_MAPPER_INHERENT_WR)
 	{
 		wr = new WireRouter(arch);
+		wr->setType(wrt);
 		wr->setHasExecutableSynthMethod(false);
 	}
 	else
 		claim(false, "No valid wire-router type was specified.");
 
-	wr->setArch(arch); //ENHANCED_FPPC_WRENHANCED_FPPC_WR Shouldn't be necessary, but 'arch' is not "sticking" in the constructor
+	wr->setArch(arch); // Shouldn't be necessary, but 'arch' is not "sticking" in the constructor
 	arch->setWireRouter(wr);
 }
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -895,6 +894,12 @@ void Synthesis::setPinMappingMethod(PinMapType pmt, ResourceAllocationType rat, 
 		pm = new IndivAddrPinMapper(arch);
 	else if (pmt == CLIQUE_PM)
 		pm = new CliquePinMapper(arch);
+	else if (pmt == POWER_PM)
+		pm = new PowerAwarePinMapper(arch);
+	else if (pmt == RELY_PM)
+		pm = new ReliabilityAwarePinMapper(arch);
+	else if (pmt == SWITCH_PM)
+		pm = new SwitchingAwarePMWR(arch);
 	else if (pmt == ORIGINAL_FPPC_PM || pmt == ENHANCED_FPPC_PIN_OPT_PM || pmt == ENHANCED_FPPC_ROUTE_OPT_PM)
 		pm = new GrissomFppcPinMapper(arch);
 	else

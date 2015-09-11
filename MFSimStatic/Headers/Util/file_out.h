@@ -64,7 +64,7 @@ class FileOut
 		static void WriteCompactedRoutesToFile(DAG *dag, DmfbArch *arch, vector<ReconfigModule *> *rModules, map<Droplet *, vector<RoutePoint *> *> *routes, vector<unsigned long long> *tsBeginningCycle, string fileName);
 		static void WriteDmfbProgramToFile(map<Droplet *, vector<RoutePoint *> *> *routes, string fileName);
 		static void WriteDmfbBinaryProgramToFile(DmfbArch *arch, vector<vector<int> *> *pinActivations, string fileName);
-		static void WriteHardwareFileWithWireRoutes(DmfbArch *arch, string fileName);
+		static void WriteHardwareFileWithWireRoutes(DmfbArch *arch, string fileName, bool includeWireRouting);
 		static void WriteInputtableDmfbArchToFile(DmfbArch *arch, string fileName);
 		static void WriteDropletConcentrationStudyToFile(DAG *dag, DmfbArch *arch, map<Droplet *, vector<RoutePoint *> *> *routes, string fileName);
 		static void WriteStringToFile(string s, string fileName);

@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------------*
- *                       (c)2014, All Rights Reserved.     						*
+ *                       (c)2013, All Rights Reserved.     						*
  *       ___           ___           ___     									*
  *      /__/\         /  /\         /  /\    									*
  *      \  \:\       /  /:/        /  /::\   									*
@@ -41,7 +41,7 @@
 #include <functional>
 #include <vector>
 #include <time.h>
-
+#include "../Testing/elapsed_timer.h"
 
 class AssayNode;
 
@@ -57,8 +57,8 @@ private:
 	map<AssayNode*, unsigned> reproduce_set;
 
 	// "Hard-coded" Constants
-	unsigned get_init_pop()	{ return 20; } //sets initial population size
-	unsigned get_num_generations() { return 100; } // sets the number of generations
+	unsigned get_init_pop()	{ return 100; } //sets initial population size
+	unsigned get_num_generations() { return 1000; } // sets the number of generations
 	unsigned get_rep_amnt()	{ return (get_init_pop() * .125); } //sets percentage of population to be reproduced
 	unsigned get_cross_amnt() { return (get_init_pop() * .625); } //sets percentage of population to be crossed over
 	unsigned get_mut_amnt() { return (get_init_pop() * .25); } //sets percentage of population to be mutated

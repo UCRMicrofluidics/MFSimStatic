@@ -29,6 +29,7 @@ class DmfbArch;
 class Scheduler;
 class Placer;
 class Router;
+class DAG;
 
 class CompatChk
 {
@@ -38,7 +39,7 @@ class CompatChk
 		virtual ~CompatChk();
 
 		// Methods
-		static void PreScheduleChk(Scheduler *s, DmfbArch *arch, bool runAsEntireFlow);
+		static void PreScheduleChk(Scheduler *s, DmfbArch *arch, DAG *dagToSchedule, bool runAsEntireFlow);
 		static void PrePlaceChk(Placer *p, DmfbArch *arch, bool runAsEntireFlow);
 		static void PreRouteChk(Router *r, DmfbArch *arch, bool runAsEntireFlow);
 		static void PreWireRouteChk(DmfbArch *arch, bool runAsEntireFlow);

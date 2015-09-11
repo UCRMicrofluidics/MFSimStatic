@@ -256,6 +256,6 @@ void Path::rip_up() {
 		current_node->claimedPin = -1;
 		current_node->spawn = NULL;
 	}
-	path.clear();
+	clear();
 	shared_pins.clear();
 }

@@ -1,0 +1,17 @@
+ARCHNAME (Arch_FPPC2_B3)
+DIM (13, 28)
+
+Input (north, 2, 2, buffer)
+Input (north, 4, 2, sample)
+Input (north, 6, 2, reactant)
+Input (north, 8, 2, Reactant1)
+Input (south, 2, 2, Reactant2)
+Input (south, 4, 2, Reactant3)
+Input (south, 6, 2, Reactant4)
+Output (south, 8, 0, OUTPUT)
+Output (south, 10, 0, waste)
+
+Input (north, 10, 2, wash, true)
+Output (south, 12, 0, waste, true)
+FREQ (100)
+TIMESTEP (1)

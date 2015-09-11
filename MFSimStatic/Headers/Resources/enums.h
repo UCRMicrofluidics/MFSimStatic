@@ -31,10 +31,13 @@ enum WireSegType { LINE_WS, ARC_WS };
 enum KamerNodeType { OE, IE, GE, RW };
 enum ModuleDeltaType { TS_MDT, C_MDT }; // Warning: Changing this order requires a change in the visualizer's parser
 
+// Common benchmark (does not include every possible benchmark, just common ones)
+enum CommonBenchmarkType { PCR_BM, IN_VITRO_1_BM, IN_VITRO_2_BM, IN_VITRO_3_BM, IN_VITRO_4_BM, IN_VITRO_5_BM, PROTEIN_BM, PROTEIN_SPLIT_1_BM, PROTEIN_SPLIT_2_BM, PROTEIN_SPLIT_3_BM, PROTEIN_SPLIT_4_BM, PROTEIN_SPLIT_5_BM };
+
 // Synthesis types
-enum SchedulerType { LIST_S, PATH_S, GENET_S, RICKETT_S, FD_LIST_S, FPPC_S, FPPC_PATH_S, RT_EVAL_LIST_S, SKYCAL_S /*,NEW_S*/};
-enum PlacerType { GRISSOM_LE_B, GRISSOM_PATH_B, SA_P, KAMER_LL_P, FPPC_LE_B, SKYCAL_P /*,NEW_P*/}; // Placer OR Binder
-enum RouterType { GRISSOM_FIX_R, GRISSOM_FIX_MAP_R, ROY_MAZE_R, BIOROUTE_R, FPPC_SEQUENTIAL_R, FPPC_PARALLEL_R, CHO_R, A_STAR_R, LEE_R, SKYCAL_R /*,NEW_R*/};
+enum SchedulerType { LIST_S, PATH_S, GENET_S, RICKETT_S, FD_LIST_S, FPPC_S, FPPC_PATH_S, RT_EVAL_LIST_S, GENET_PATH_S /*,NEW_S*/};
+enum PlacerType { GRISSOM_LE_B, GRISSOM_PATH_B, KAMER_LL_P, FPPC_LE_B /*,NEW_P*/}; // Placer OR Binder
+enum RouterType { GRISSOM_FIX_R, GRISSOM_FIX_MAP_R, ROY_MAZE_R, BIOROUTE_R, FPPC_SEQUENTIAL_R, FPPC_PARALLEL_R, CHO_R, LEE_R, CDMA_FULL_R /*,NEW_R*/};
 
 // Scheduling utility types
 enum ResourceAllocationType { GRISSOM_FIX_0_RA, GRISSOM_FIX_1_RA, GRISSOM_FIX_2_RA, GRISSOM_FIX_3_RA, PC_INHERENT_RA, INHERIT_RA }; // Determines how many resources (and what type) will be available for the scheduler
@@ -44,10 +47,10 @@ enum CompactionType { NO_COMP, BEG_COMP, MID_COMP, CHO_COMP, DYN_COMP, INHERENT_
 enum ProcessEngineType { FIXED_PE, FREE_PE, FPPC_PE }; // How to move droplets in modules
 
 // Pin-mapping types
-enum PinMapType { INDIVADDR_PM, CLIQUE_PM, ORIGINAL_FPPC_PM, ENHANCED_FPPC_PIN_OPT_PM, ENHANCED_FPPC_ROUTE_OPT_PM };
+enum PinMapType { INDIVADDR_PM, CLIQUE_PM, ORIGINAL_FPPC_PM, ENHANCED_FPPC_PIN_OPT_PM, ENHANCED_FPPC_ROUTE_OPT_PM, POWER_PM, RELY_PM, SWITCH_PM };
 
 // Wire-routing types
-enum WireRouteType { NONE_WR, PATH_FINDER_WR, YEH_WR, ENHANCED_FPPC_WR };
+enum WireRouteType { NONE_WR, PIN_MAPPER_INHERENT_WR, PATH_FINDER_WR, YEH_WR, ENHANCED_FPPC_WR }; //PM_PATH_FINDER_WR, PM_YEH_WR
 enum WireRouteNodeType { PIN_WRN, EMPTY_PIN_WRN, ESCAPE_WRN, INTERNAL_WRN, SUPER_ESCAPE_WRN };
 
 // Routing status enums

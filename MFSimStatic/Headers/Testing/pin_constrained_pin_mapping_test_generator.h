@@ -39,7 +39,7 @@ class PCPinMappingTestGenerator : public PinMapper
 		// Methods
 		void setCustomMapping();
 		void setMapPreSched();
-		void setMapPostRoute(vector<vector<int> *> *pinActivations);
+		void setMapPostRoute(vector<vector<int> *> *pinActivations, map<Droplet *, vector<RoutePoint *> *> *routes);
 		void flattenSpecialPurposePins();
 		void unflattenSpecialPurposePins();
 		void setGeneratorTestType(PinConstrainedPinMapTestGeneratorType t) { type = t; }

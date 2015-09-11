@@ -86,3 +86,29 @@ string Util::TrimString(string str)
 		str = str.substr(0, str.length()-1);
 	return str;
 }
+
+////////////////////////////////////////////////////////////////////////////
+// Simple implementation of itoa used to replace the standard version which
+// is not supported by all compilers
+////////////////////////////////////////////////////////////////////////////
+char* Util::itoa(int value, char* str, int base)
+{
+	switch(base)
+	{
+		case 2:
+			//mod 2 returns the base 2 value as a base 10 value
+			sprintf(str,"%d",value%2);
+			break;
+		case 8:
+			sprintf(str,"%o",value);
+			break;
+		default:
+		case 10:
+			sprintf(str,"%d",value);
+			break;
+		case 16:
+			sprintf(str,"%x",value);
+			break;
+	}
+	return str;
+}

@@ -28,12 +28,16 @@
 #include "../../Headers/PinMapper/clique_pin_mapper.h"
 #include "../../Headers/Util/sort.h"
 #include<sstream>
+#include<stdlib.h>
 #include <set>
 
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::ifstream;
+using std::string;
+
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Constructors
@@ -44,6 +48,7 @@ CliquePinMapper::CliquePinMapper()
 }
 CliquePinMapper::CliquePinMapper(DmfbArch *dmfbArch)
 {
+	RAUs = 0;
 	arch = dmfbArch;
 }
 
@@ -59,42 +64,45 @@ CliquePinMapper::~CliquePinMapper()
 ///////////////////////////////////////////////////////////////////////////////////
 // This function should be overridden; it is called just after routing.
 ///////////////////////////////////////////////////////////////////////////////////
-void CliquePinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations)
+void CliquePinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations, map<Droplet *, vector<RoutePoint *> *> *routes)
 {
 	// Variables for statistics
+	int post_num_activations = 0;
+	int pre_num_activations = 0;
+
 	set<int> allPins;
 	int pinsBefore = arch->getPinMapper()->getNumUniquePins();
 	int elecsBefore = arch->getPinMapper()->getNumElectrodes();
 
 	vector< vector<int> > AMatrix = initActivationMatrix(pinActivations);
-	Graph coloringGraph = convertMatrixToGraph(AMatrix);
+	for(int i = 0; i < AMatrix.size(); ++i)
+	{
+		for(int j = 0; j < AMatrix[i].size(); ++j)
+		{
+			if(AMatrix[i][j] == 1)
+				pre_num_activations++;
+		}
+	}
+	initTranspose(AMatrix);
+	Graph coloringGraph = convertMatrixToGraph(AMatrix.size());
+
 	//cerr << "CliquePinMapper: coloring...\n";
 	coloringGraph.dsatur();
-	//cerr << "CliquePinMapper: Setting pin mapping..." << endl;
-	setPinMapping(coloringGraph);
-	//cerr << "CliquePinMapper: Pin Mapping Done..." << endl;
-	//cerr << "CliquePinMapper: Setting new pin activation sequence..." << endl;
-	char * string1 = new char[10];
 
 
+	vector<int> pinSizes(coloringGraph.find_max_color() + 1, 0);
+	if (debugPrint()) cout << "MaxColor = " << coloringGraph.find_max_color() << endl;
+	//coloringGraph.print_coloring();
 
-
-	//Reassign Pin Activations Based on new mapping
-	/*for (size_t i = 0; i < pinActivations->size(); ++i)
+	for (map<string, int >::iterator graph_it = coloringGraph.coloring.begin(); graph_it != coloringGraph.coloring.end(); graph_it++)
 	{
-			//int num = 0;
-			for (size_t j = 0; j < pinActivations->at(i)->size(); ++j )
-			{
-					if(!trivialElectrodes[pinActivations->at(i) ->at(j)])
-					{
-						pinActivations->at(i)->at(j) = coloringGraph.coloring.at(itoa(pinActivations->at(i)->at(j), string1, 10));
-					}
-			}
+		pinSizes[graph_it->second]++;
+	}
 
-	}*/
+	setPinMapping(coloringGraph);
 
-
-
+	char * string1 = new char[10];
+	vector<vector<int> > pinActivationSeqs(coloringGraph.find_max_color() + 1, vector<int>(pinActivations->size(), 0));
 	//Reassign Pin Activations Based on new mapping
 	for (size_t i = 0; i < pinActivations->size(); ++i)
 	{
@@ -104,7 +112,7 @@ void CliquePinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations)
 		{
 			if(!trivialElectrodes[pinActivations->at(i) ->at(j)])
 			{
-				int pin = coloringGraph.coloring.at(itoa(pinActivations->at(i)->at(j), string1, 10));
+				int pin = coloringGraph.coloring.at(Util::itoa(pinActivations->at(i)->at(j), string1, 10));
 				activatedThisCycle.insert(pin);
 				allPins.insert(pin);
 			}
@@ -112,11 +120,38 @@ void CliquePinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations)
 		pinActivations->at(i)->clear(); // Clear out the old individually addressable pins
 		set<int>::iterator pinIt = activatedThisCycle.begin();
 		for (; pinIt != activatedThisCycle.end(); pinIt++)
+		{
+			//cout << *pinIt << " ";
 			pinActivations->at(i)->push_back(*pinIt);
-	}
+			pinActivationSeqs.at(*pinIt).at(i) = 1;
+			post_num_activations += pinSizes[*pinIt];
+		}
 
-	cout << "Number of electrodes reduced from " << elecsBefore << " to " << arch->getPinMapper()->getNumElectrodes() << endl;
-	cout << "Number of pins reduced from " << pinsBefore << " to " << arch->getPinMapper()->getNumUniquePins() << endl;
+	}
+	//cout << "Entire electrode array size ( num electrodes * num activations) = " << tAMatrix.size() * pinActivations -> size() << endl;
+	if (debugPrint()) cout << "[CliquePinMapper] Addressed " << pinSizes.size() << " pins." << endl;
+	if (debugPrint()) cout << "[CliquePinMapper] Total redundant activations: " << post_num_activations - pre_num_activations << endl;
+	if (debugPrint()) cout << "[CliquePinMapper] Total initial activations: " << pre_num_activations << endl;
+	if (debugPrint()) cout << "[CliquePinMapper] Total post activations: " << post_num_activations << endl;
+	cout << "[CliquePinMapper] Number of electrodes reduced from " << elecsBefore << " to " << arch->getPinMapper()->getNumElectrodes() << endl;
+	cout << "[CliquePinMapper] Number of pins reduced from " << pinsBefore << " to " << arch->getPinMapper()->getNumUniquePins() << endl;
+
+	if (debugPrint()) cout << "[CliquePinMapper] switching results:" << endl;
+	if (debugPrint()) calculateSwitchingResults(pinActivationSeqs);
+
+	numGVatIndex = vector<int>(pinActivations->size(), 0);
+	for(int i = 0; i < pinActivationSeqs.size(); ++i)
+	{
+		addGroundVectorsToEntireAssay2(i, pinActivationSeqs);
+	}
+	long long numGVs = 0;
+	for(int i = 0; i < numGVatIndex.size(); ++i)
+	{
+		numGVs += numGVatIndex.at(i);
+	}
+	if (debugPrint()) cout << "[CliquePinMapper] total gvs that would be inserted: " << numGVs << endl;
+
+
 	// DTG Test
 	/*for (size_t i = 0; i < pinActivations->size(); ++i)
 	{
@@ -131,7 +166,23 @@ void CliquePinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations)
 
 	//cerr << "CliquePinMapper: finished." << endl;
 }
-
+///////////////////////////////////////////////////////////////////////
+// This method transposes the activation matrix so that is easier to //
+// traverse.														 //
+///////////////////////////////////////////////////////////////////////
+void CliquePinMapper::initTranspose(const vector<vector<int> > & matrix)
+{
+	if(matrix.size() == 0)
+		return;
+	tAMatrix = vector<vector<int> >(matrix[0].size());
+	for(int i = 0; i < matrix.size(); ++i)
+	{
+		for(int j = 0; j < matrix[i].size(); ++j)
+		{
+			tAMatrix[j].push_back(matrix[i][j]);
+		}
+	}
+}
 
 // Debug Method
 void CliquePinMapper::printBoardAtActivation(int n, const vector< vector< int> > &AMatrix, ofstream &output)
@@ -163,6 +214,103 @@ void CliquePinMapper::printBoardAtActivation(int n, const vector< vector< int> >
 
 }
 
+void CliquePinMapper::addGroundVectorsToEntireAssay2(int seqIdx, vector<vector<int> > & PinActivationSeqs)
+{
+	int GroundVector_r = 4;
+	int GroundVector_c = 2;
+	if(GroundVector_r <= 1)
+	{
+		cerr << "[ReliabilityAwarePinMapper] InternalError: num Consecutive Activations Threshold(GroundVector_r) must be 2 or greater..." << endl << flush;
+		return;
+	}
+	int numConsecActivations = 0;
+	//vector< vector<int> > AMatrix = initActivationMatrix(pinActivations);
+	//tAMatrix.clear();
+	//initTranspose(AMatrix);
+
+	// If we get to the last entry and there is no conflict
+	// the last entry does not matter because it is the end of the
+	// assay execution
+	vector<int> seq(PinActivationSeqs[seqIdx]);
+	//for(int i = 0; i < currentPins[seqIdx].size(); ++i)
+	//{
+	//if(seqIdx == 19)
+	//{
+	//		cout << currentPins[seqIdx][i] << endl;
+	//}
+	//	}
+	if(seq.size() <= 1)
+	{
+		cerr << "[ReliabilityAwarePinMapper] InternalError: insufficient activation sequence size (size < 2)..." << endl << flush;
+		return;
+	}
+
+	for(int i = 0; i < seq.size() - 1; ++i)
+	{
+		//cout << seq[i];
+		if(seq[i] == 1)
+		{
+			//cout << "seq[" << i + 1 << "] = " << seq[i + 1] << endl;
+			numConsecActivations++;
+		}
+		else
+		{
+			numConsecActivations = 0;
+		}
+		if(numConsecActivations == GroundVector_c)
+		{
+			//if(!criticalTimesteps.empty() && criticalTimesteps[i] && criticalTimesteps[i + 1])
+			//{
+			//cout << "criticalTimesteps[" << i << "] = " << criticalTimesteps[i] << endl;
+			//cout << "criticalTimesteps[" << i + 1 << "] = " << criticalTimesteps[i + 1] << endl;
+			//We cannot insert a ground vector here as it violates a critical operation
+			// (if i happens to be the end of one critical operation and i + 1 the beginning
+			// of another, technically we CAN add a ground vector in that case, but this algorithm
+			// will not do that)
+			//return;
+			//}
+			//else
+			//{
+			//We need to insert up to GroundVector_c Ground Vectors
+			if(seq[i + 1] != 0)
+			{
+				if( numGVatIndex[i] < GroundVector_r)
+					numGVatIndex[i] = GroundVector_r;
+				//insertGroundVectors(i + 1, GroundVector_c, pinActivations, matrix);
+				//GVtemp += GroundVector_c;
+			}
+			else
+			{
+				int remainingGroundVectors = GroundVector_r;
+				for(int j = i + 1 ; j < i + GroundVector_r + 1; ++j)
+				{
+					if(j >= seq.size())
+					{
+						//Do I need to insert the ground vectors at the end?
+						//Does it not matter?
+						break;
+					}
+					if(seq[j] != 0)
+					{
+						if(numGVatIndex[i] < remainingGroundVectors)
+						{
+							numGVatIndex[i] = remainingGroundVectors;
+						}
+						//insertGroundVectors(j, remainingGroundVectors, pinActivations, matrix);
+						break;
+					}
+					else
+					{
+						--remainingGroundVectors;
+					}
+
+				}
+			}
+			//}
+			numConsecActivations = 0;
+		}
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////////
 // This function creates and returns a matrix initialized to the pin activations
@@ -185,14 +333,80 @@ vector<vector<int> > CliquePinMapper::initActivationMatrix(const vector<vector<i
 	{
 		for (size_t j = 0; j < pinActivations->at(i)->size(); ++j )
 		{
-				AMatrix[i][pinActivations->at(i)->at(j)] = 1;
-				setInterferenceRegion(AMatrix, i, pinActivations->at(i)->at(j), false);
+			AMatrix[i][pinActivations->at(i)->at(j)] = 1;
+			setInterferenceRegion(AMatrix, i, pinActivations->at(i)->at(j), false);
 		}
 
 	}
 	return AMatrix;
 }
 
+int CliquePinMapper::getNumSwitches2(const vector<int> & seq)
+{
+	//cout << "E" << flush << endl;
+	int result = 0;
+	if(seq.size() == 0 || seq.size() == 1)
+	{
+		return 0;
+	}
+	int test = 0;
+	while(seq[test] == 2)
+	{
+		test++;
+	}
+	int prevIdx = test;
+	for(int i = test + 1; i <  seq.size(); ++i)
+	{
+
+		if(seq[i] == 2)
+		{
+			continue;
+		}
+		if(seq[prevIdx] != seq[i])
+		{
+			result++;
+		}
+		prevIdx = i;
+	}
+	return result;
+}
+
+void CliquePinMapper::calculateSwitchingResults(vector<vector<int> > PinActivationSeqs)
+{
+	vector<int> switches;
+	for(int i = 0; i < PinActivationSeqs.size(); ++i)
+	{
+		switches.push_back(getNumSwitches2(PinActivationSeqs[i]));
+	}
+	sort(switches.begin(),switches.end());
+	long long minVal = *switches.begin();
+	long long maxVal = switches[switches.size() - 1];
+
+	double median;
+	double mean;
+	if(switches.size() % 2 == 0)
+	{
+		median = (switches[switches.size() / 2] + switches[(switches.size() / 2) + 1]) / (double) 2;
+	}
+	else
+	{
+		median = switches[(switches.size() / 2) + 1];
+	}
+	long long sum = 0;
+	for(int i = 0; i < switches.size(); ++i)
+	{
+		sum += switches[i];
+	}
+	mean = sum / (double) switches.size();
+
+
+	cout << "Switching Results:" << endl;
+	cout << "Max switches on one pin = " << maxVal << endl;
+	cout << "Min switches on one pin = " << minVal << endl;
+	cout << "Median switches = " << median << endl;
+	cout << "Mean switches = " << mean << endl;
+	cout << "Total Switches across all pins = " << sum << endl;
+}
 ///////////////////////////////////////////////////////////////////////////////////
 // This function sets the interference region of a particular electrode at a
 // particular activation time step. This function accounts for direct neighbors
@@ -515,17 +729,17 @@ void CliquePinMapper::setInterferenceRegion(vector<vector<int> > &matrix, int ti
 		}
 
 		if(timestep != 0 && !lookahead)
-				{
-					if(matrix[timestep - 1][electrode + 1] == 1)
-					{
-						setInterferenceRegion(matrix, timestep, electrode + 1, true);
-						//matrix[timestep][electrode + 1]
-					}
-					else if(matrix[timestep - 1][electrode + numColumns] == 1)
-					{
-						setInterferenceRegion(matrix, timestep, electrode + numColumns, true);
-					}
-				}
+		{
+			if(matrix[timestep - 1][electrode + 1] == 1)
+			{
+				setInterferenceRegion(matrix, timestep, electrode + 1, true);
+				//matrix[timestep][electrode + 1]
+			}
+			else if(matrix[timestep - 1][electrode + numColumns] == 1)
+			{
+				setInterferenceRegion(matrix, timestep, electrode + numColumns, true);
+			}
+		}
 
 	}
 	//Check case where droplet is located on the upper right corner of the chip
@@ -554,16 +768,16 @@ void CliquePinMapper::setInterferenceRegion(vector<vector<int> > &matrix, int ti
 
 
 		if(timestep != 0 && !lookahead)
-				{
-					if(matrix[timestep - 1][electrode - 1] == 1)
-					{
-						setInterferenceRegion(matrix, timestep, electrode - 1, true);
-					}
-					else if(matrix[timestep - 1][electrode + numColumns] == 1)
-					{
-						setInterferenceRegion(matrix, timestep, electrode + numColumns, true);
-					}
-				}
+		{
+			if(matrix[timestep - 1][electrode - 1] == 1)
+			{
+				setInterferenceRegion(matrix, timestep, electrode - 1, true);
+			}
+			else if(matrix[timestep - 1][electrode + numColumns] == 1)
+			{
+				setInterferenceRegion(matrix, timestep, electrode + numColumns, true);
+			}
+		}
 
 	}
 	//Check case where droplet is located on the lower left corner of the chip
@@ -628,16 +842,16 @@ void CliquePinMapper::setInterferenceRegion(vector<vector<int> > &matrix, int ti
 			}
 		}
 		if(timestep != 0 && !lookahead)
-				{
-					if(matrix[timestep - 1][electrode - 1] == 1)
-					{
-						setInterferenceRegion(matrix, timestep, electrode - 1, true);
-					}
-					else if(matrix[timestep  - 1][electrode - numColumns] == 1)
-					{
-						setInterferenceRegion(matrix, timestep, electrode - numColumns, true);
-					}
-				}
+		{
+			if(matrix[timestep - 1][electrode - 1] == 1)
+			{
+				setInterferenceRegion(matrix, timestep, electrode - 1, true);
+			}
+			else if(matrix[timestep  - 1][electrode - numColumns] == 1)
+			{
+				setInterferenceRegion(matrix, timestep, electrode - numColumns, true);
+			}
+		}
 
 	}
 }
@@ -649,6 +863,87 @@ void CliquePinMapper::setInterferenceRegion(vector<vector<int> > &matrix, int ti
 // the other node. Matching is O(n^2 * m) where n is the number of electrodes and m is
 // the number of activations
 ///////////////////////////////////////////////////////////////////////////////////
+CliquePinMapper::Graph CliquePinMapper::convertMatrixToGraph(const int & size)
+{
+	Graph g;
+	string s1, s2;
+	bool nomatch = false;
+	char * string1 = new char[10];
+	char * string2 = new char[10];
+	//int size = matrix.size();
+
+	// Get number of electrodes
+	//int numElectrodes = arch -> getNumCellsY() * arch -> getNumCellsX();
+
+	bool match;
+
+	//Generate a map of each electrode number to wheter or not it is a trivial case
+	// i.e. the electrode never being on during the entire simulation.
+	for (int i = 0; i < tAMatrix.size(); ++i)
+	{
+		match = true;
+		for( int j = 0; j < tAMatrix[i].size(); ++j)
+		{
+			if(tAMatrix[i][j] == 1)
+			{
+				match = false;
+				break;
+			}
+		}
+		if(match)
+		{
+			trivialElectrodes.insert(make_pair(i, true));
+		}
+		else
+		{
+			trivialElectrodes.insert(make_pair(i, false));
+		}
+	}
+
+	// Add a node for each electrode
+	for (int i = 0; i < tAMatrix.size(); ++i)
+	{
+		g.add_node( Util::itoa(i, string1, 10));
+	}
+
+
+	for(int j = 0; j < tAMatrix.size(); ++j)
+	{
+		if(trivialElectrodes[j])
+			continue;
+		s1 = Util::itoa(j,string1,10);
+
+		for(int k = j + 1; k < tAMatrix.size(); ++k )
+		{
+			if(trivialElectrodes[k])
+				continue;
+			s2 = Util::itoa(k,string2,10);
+
+
+			//Warmup sequence of 200 can be hardcoded out? (if application permits)
+			for(int i = 0; i < size; ++i)
+			{
+				if( (tAMatrix[j][i] == 0 && tAMatrix[k][i] == 1) || (tAMatrix[j][i] == 1 && tAMatrix [k][i] == 0))
+				{
+					nomatch = true;
+					break;
+				}
+			}
+			if(nomatch)
+			{
+				g.add_edge(s1, s2);
+				nomatch = false;
+			}
+		}
+	}
+
+	//cleanup memory
+	delete [] string1;
+	delete [] string2;
+	return g;
+
+}
+/*
 CliquePinMapper::Graph CliquePinMapper::convertMatrixToGraph(const vector< vector<int> > &matrix)
 {
 		Graph g;
@@ -690,7 +985,7 @@ CliquePinMapper::Graph CliquePinMapper::convertMatrixToGraph(const vector< vecto
 		// Add a node for each electrode
 		for (int i = 0; i < numElectrodes; ++i)
 		{
-				g.add_node( itoa(i, string1, 10));
+				g.add_node( Util::itoa(i, string1, 10));
 		}
 
 
@@ -701,29 +996,29 @@ CliquePinMapper::Graph CliquePinMapper::convertMatrixToGraph(const vector< vecto
 		{
 			if(trivialElectrodes[j])
 				continue;
-			s1 = itoa(j,string1,10);
+			s1 = Util::itoa(j,string1,10);
 
 			for(int k = j + 1; k < numElectrodes; ++k )
 			{
 				if(trivialElectrodes[k])
 					continue;
-				s2 = itoa(k,string2,10);
+				s2 = Util::itoa(k,string2,10);
 
 
 				//Warmup sequence of 200 can be hardcoded out? (if application permits)
-				for(int i = 0; i < size; ++i)
-				{
-					if((matrix[i][j] == 0 && matrix[i][k] == 1) || (matrix[i][j] == 1 && matrix [i][k] == 0))
+					for(int i = 0; i < size; ++i)
 					{
-							nomatch = true;
-							break;
+						if((matrix[i][j] == 0 && matrix[i][k] == 1) || (matrix[i][j] == 1 && matrix [i][k] == 0))
+						{
+								nomatch = true;
+								break;
+						}
 					}
-				}
-				if(nomatch)
-				{
-					g.add_edge(s1, s2);
-					nomatch = false;
-				}
+					if(nomatch)
+					{
+						g.add_edge(s1, s2);
+						nomatch = false;
+					}
 
 			}
 		}
@@ -733,7 +1028,7 @@ CliquePinMapper::Graph CliquePinMapper::convertMatrixToGraph(const vector< vecto
 		return g;
 
 }
-
+ */
 ////////////////////////////////////////////////////////////////////////////////////
 // This function sets the pin mapping for use with a wire router. It uses the
 // coloring of the graph generated by CliquePinMapper::convertMatrixToGraph()
@@ -765,8 +1060,9 @@ void CliquePinMapper::setPinMapping(Graph &coloringGraph)
 		if(trivialElectrodes[electrode])
 			pinMapping->at(ecol)->at(erow) = -1;
 		else
+		{
 			pinMapping->at(ecol)->at(erow) = color;
-
+		}
 	}
 
 	// Set pin numbers for the I/O ports
@@ -805,7 +1101,7 @@ void CliquePinMapper::Graph::dsatur() {
 	}
 	coloring[max_degree] = 0;
 
-	//populate the todo list with the remaining vertices
+	//populate the to do list with the remaining vertices
 	for(map< string, vector<string> >::iterator i = graph.begin(); i != graph.end(); i++) {
 		if((*i).first != max_degree) {
 			coloring[(*i).first] = -1;
@@ -822,7 +1118,7 @@ void CliquePinMapper::Graph::dsatur() {
 		for(unsigned i=0; i<todo.size(); i++) {
 			int internal = 0;
 			vector<int> internal_colors;
-			//iterate over todo vertices neighbors and count how many are colroed
+			//iterate over to do vertices neighbors and count how many are colroed
 			for(unsigned j=0; j<graph[todo[i]].size(); j++) {
 				//a lack of color is denoted with -1, so check it has an actual color
 				if(coloring[graph[todo[i]][j]] != -1) {
@@ -837,12 +1133,11 @@ void CliquePinMapper::Graph::dsatur() {
 				pos = i;
 			}
 		}
-		//we now know the highest saturated vertex, so remove it from the todo list
+		//we now know the highest saturated vertex, so remove it from the to do list
 		todo.erase(todo.begin()+pos);
 		int max_color = 0;
 		int done = 0;
 		//find the lowest possible value color that isn't used in a neighbor
-		//TODO (Brian): might be a place that can be easily optimized, this is kinda ugly
 		while(!done) {
 			done = 1;
 			for(unsigned i=0; i<saturation_colors.size(); i++) {
@@ -894,28 +1189,28 @@ int CliquePinMapper::Graph::find_max_color() {
 
 
 const string ColorArray[114] = {"aliceblue","antiquewhite",
-"aquamarine","azure","beige","bisque","blanchedalmond","blue",
-"blueviolet","brown","brown1","brown2","brown3","brown4", //14
-"burlywood","burlywood1","burlywood2","burlywood3","burlywood4",
-"cadetblue","cadetblue1","cadetblue2","cadetblue3","cadetblue4",
-"chartreuse","chartreuse1","chartreuse2","chartreuse3","chartreuse4",
-"chocolate","chocolate1","chocolate2","chocolate3","chocolate4",
-"coral","coral1","coral2","coral3","coral4",
-"cornflowerblue","cornsilk","cornsilk1","cornsilk2","cornsilk3",
-"cornsilk4","crimson","cyan","cyan1","cyan2",
-"cyan3","cyan4","darkgoldenrod","darkgoldenrod1","darkgoldenrod2",
-"darkgoldenrod3","darkgoldenrod4","darkgreen","darkkhaki","darkolivegreen",
-"darkolivegreen1","darkolivegreen2","darkolivegreen3","darkolivegreen4","darkorange", //64
-"darkorange1","darkorange2","darkorange3","darkorange4","darkorchid",
-"darkorchid1","darkorchid2","darkorchid3","darkorchid4","darksalmon",
-"darkseagreen","darkseagreen1","darkseagreen2","darkseagreen3","darkseagreen4",
-"darkslateblue","darkslategray","darkslategray1","darkslategray2","darkslategray3",
-"darkslategray4","darkslategrey","darkturquoise","darkviolet","deeppink",
-"deeppink1","deeppink2","deeppink3","deeppink4","deepskyblue",
-"deepskyblue1","deepskyblue2","deepskyblue3","deepskyblue4","dimgray",
-"dimgrey","dodgerblue","dodgerblue1","dodgerblue2","dodgerblue3",
-"dodgerblue4","firebrick","firebrick1","firebrick2","firebrick3",
-"firebrick4","floralwhite","forestgreen","gainsboro","ghostwhie"};
+		"aquamarine","azure","beige","bisque","blanchedalmond","blue",
+		"blueviolet","brown","brown1","brown2","brown3","brown4", //14
+		"burlywood","burlywood1","burlywood2","burlywood3","burlywood4",
+		"cadetblue","cadetblue1","cadetblue2","cadetblue3","cadetblue4",
+		"chartreuse","chartreuse1","chartreuse2","chartreuse3","chartreuse4",
+		"chocolate","chocolate1","chocolate2","chocolate3","chocolate4",
+		"coral","coral1","coral2","coral3","coral4",
+		"cornflowerblue","cornsilk","cornsilk1","cornsilk2","cornsilk3",
+		"cornsilk4","crimson","cyan","cyan1","cyan2",
+		"cyan3","cyan4","darkgoldenrod","darkgoldenrod1","darkgoldenrod2",
+		"darkgoldenrod3","darkgoldenrod4","darkgreen","darkkhaki","darkolivegreen",
+		"darkolivegreen1","darkolivegreen2","darkolivegreen3","darkolivegreen4","darkorange", //64
+		"darkorange1","darkorange2","darkorange3","darkorange4","darkorchid",
+		"darkorchid1","darkorchid2","darkorchid3","darkorchid4","darksalmon",
+		"darkseagreen","darkseagreen1","darkseagreen2","darkseagreen3","darkseagreen4",
+		"darkslateblue","darkslategray","darkslategray1","darkslategray2","darkslategray3",
+		"darkslategray4","darkslategrey","darkturquoise","darkviolet","deeppink",
+		"deeppink1","deeppink2","deeppink3","deeppink4","deepskyblue",
+		"deepskyblue1","deepskyblue2","deepskyblue3","deepskyblue4","dimgray",
+		"dimgrey","dodgerblue","dodgerblue1","dodgerblue2","dodgerblue3",
+		"dodgerblue4","firebrick","firebrick1","firebrick2","firebrick3",
+		"firebrick4","floralwhite","forestgreen","gainsboro","ghostwhie"};
 
 //Returns a color
 string CliquePinMapper::Graph::get_color_string(int color,int max_color) {

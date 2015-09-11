@@ -1069,9 +1069,9 @@ string FileIn::GetLine(ifstream *ifs)
 	string line;
 	getline(*ifs, line);
 
-	//if (!line.empty())
-	//    if (isspace(line.at(line.size()-1)))
-	//        line = line.substr(0,line.size()-1);
+	if (!line.empty())
+	    if (isspace(line.at(line.size()-1)))
+	        line = line.substr(0,line.size()-1);
 
 	return line;
 }

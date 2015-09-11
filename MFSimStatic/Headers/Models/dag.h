@@ -100,6 +100,8 @@ class DAG : public Entity
 		vector<AssayNode *> getAllOutputNodes() { return tails; }
 		vector<AssayNode *> getAllStorageHolders() { return storageHolders; }
 		int getNumNonIoNodes() { return (allNodes.size() - heads.size() - tails.size()); }
+		bool requiresHeater() { return heats.size() > 0; }
+		bool requiresDetector() { return !detects.empty(); }
 
 		// Print/Debug
 		void PrintSchedule();
@@ -116,6 +118,7 @@ class DAG : public Entity
 		friend class GrissomFppcPathScheduler;
 		friend class GrissomFppcScheduler;
 		friend class GrissomFppcLEBinder;
+		friend class GenetPathScheduler;
 		friend class GrissomPathBinder;
 		friend class RickettScheduler;
 		friend class GrissomLEBinder;
@@ -126,7 +129,6 @@ class DAG : public Entity
 		friend class FDLScheduler;
 		friend class PinMapper;
 		friend class Priority;
-		friend class SAPlacer;
 		friend class Analyze;
 		friend class Test;
 };

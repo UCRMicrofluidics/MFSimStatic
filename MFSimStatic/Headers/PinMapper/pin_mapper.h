@@ -28,8 +28,12 @@
 
 #include "../Models/fixed_module.h"
 #include "../Models/dmfb_arch.h"
+#include "../Models/droplet.h"
+#include "../Resources/structs.h"
 #include <vector>
+#include <map>
 using std::vector;
+using std::map;
 
 class DmfbArch;
 
@@ -53,21 +57,21 @@ class PinMapper
 		ResourceAllocationType getResAllocType() { return resAllocType; }
 		bool hasExecutableSynthMethod() { return hasExecutableSyntesisMethod; }
 		void setHasExecutableSynthMethod(bool hasMethod) { hasExecutableSyntesisMethod = hasMethod; }
-
+		bool getIsCombinedWireRouter() { return isCombinedWireRotuer; }
 		int getNumUniquePins();
 		int getNumElectrodes();
 		void setType(PinMapType pmt) { type = pmt; }
 		PinMapType getType() { return type; }
+		bool debugPrint() { return false; }
 
 		// Methods
 		virtual void setCustomMapping();
 		virtual void setMapPreSched();
-		virtual void setMapPostRoute(vector<vector<int> *> *pinActivations);
+		virtual void setMapPostRoute(vector<vector<int> *> *pinActivations, map<Droplet *, vector<RoutePoint *> *> *routes);
 		void initPinMapping();
 		void printPinMapping();
 		virtual void flattenSpecialPurposePins();
 		virtual void unflattenSpecialPurposePins();
-
 
 	protected:
 		// Methods
@@ -84,6 +88,7 @@ class PinMapper
 		ResourceAllocationType resAllocType; // Resource allocation type
 		PinMapType type;
 		bool hasExecutableSyntesisMethod; // Tells if method contains code to execute, or if it is just a shell
+		bool isCombinedWireRotuer;
 
 
 };

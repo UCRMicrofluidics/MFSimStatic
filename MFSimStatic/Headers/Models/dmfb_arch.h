@@ -59,13 +59,15 @@ class DmfbArch
 		double getSecPerTS() { return secPerTS; }
 		vector<FixedModule *> *getExternalResources() { return externalResources; }
 		vector<IoPort *> *getIoPorts() { return ioPorts; }
-		IoPort *getInput(string fluidName);
+		IoPort *getIoPort(string fluidName);
 		string getName() { return name; }
 		void setPinMapper (PinMapper *pm) { pinMapper = pm; }
 		void setWireRouter (WireRouter *wr) { wireRouter = wr; }
 		PinMapper *getPinMapper () { return pinMapper; }
 		WireRouter *getWireRouter() { return wireRouter; }
 		void setSecPerTS(double secondsPerTS) { secPerTS = secondsPerTS; }
+		bool hasHeaters();
+		bool hasDetectors();
 
 		// Methods
 

@@ -1,0 +1,82 @@
+ARCHNAME (Arch_15_19_B3)
+
+///////////////////////
+// 4x3 Modules
+///////////////////////
+// Tall - 1x20
+//DIM (8, 83)
+//EXTERNAL(DETECT, 0, 0, 7, 82)
+// 2-wide - 2x10
+//DIM (15, 43)
+//EXTERNAL(DETECT, 0, 0, 14, 42)
+//Skinny Rect - 4x5
+//DIM (29, 23)
+//EXTERNAL(DETECT, 0, 0, 28, 22)
+// Fat Rect - 5x4
+//DIM (36, 19)
+//EXTERNAL(DETECT, 0, 0, 35, 18)
+// 2-Tall - 10x2
+//DIM (71, 11)
+//EXTERNAL(DETECT, 0, 0, 70, 10)
+//Wide - 20x1
+//DIM (141, 7)
+//EXTERNAL(DETECT, 0, 0, 140, 6)
+
+
+
+///////////////////////
+// 3x3 Modules
+///////////////////////
+// Tall - 1x20
+//DIM (7, 83)
+//EXTERNAL(DETECT, 0, 0, 6, 82)
+// 2-wide - 2x10
+//DIM (13, 43)
+//EXTERNAL(DETECT, 0, 0, 12, 42)
+//Skinny Rect - 4x5
+//DIM (25, 23)
+//EXTERNAL(DETECT, 0, 0, 24, 22)
+// Fat Rect - 5x4
+//DIM (31, 19)
+//EXTERNAL(DETECT, 0, 0, 30, 18)
+// 2-Tall - 10x2
+//DIM (61, 11)
+//EXTERNAL(DETECT, 0, 0, 60, 10)
+// Wide - 20x1
+//DIM (121, 7)
+//EXTERNAL(DETECT, 0, 0, 120, 6)
+
+
+///////////////////////
+// 3x4 Modules
+///////////////////////
+// Tall - 1x20
+//DIM (7, 103)
+//EXTERNAL(DETECT, 0, 0, 6, 102)
+// 2-wide - 2x10
+//DIM (13, 53)
+//EXTERNAL(DETECT, 0, 0, 12, 52)
+//Skinny Rect - 4x5
+//DIM (25, 28)
+//EXTERNAL(DETECT, 0, 0, 24, 27)
+// Fat Rect - 5x4
+//DIM (31, 23)
+//EXTERNAL(DETECT, 0, 0, 30, 22)
+// 2-Tall - 10x2
+//DIM (61, 13)
+//EXTERNAL(DETECT, 0, 0, 60, 12)
+// Wide - 20x1
+DIM (121, 8)
+EXTERNAL(DETECT, 0, 0, 120, 7)
+
+
+// I/O for module tiling experiments
+Input (north, 2, 2, DsS)
+Input (north, 4, 2, DsB)
+Input (north, 6, 2, DsB)
+Input (east, 2, 2, DsR)
+Input (east, 4, 2, DsR)
+Output (east, 6, 0, output)
+
+FREQ (100)
+TIMESTEP (1)

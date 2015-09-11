@@ -549,11 +549,8 @@ void FileOut::WriteRoutedDagAndArchToFile(DAG *dag, DmfbArch *arch, Router *rout
 	// Are module occurrance lengths dictated by time-steps or cycles
 	os << endl << "// Reconfigurable module delta type (cycles or time-steps)" << endl;
 	os << "MODULEDELTATYPE (";
-	// So far, only the routing-based synthesis router uses cycles as it's module-length delta
-	if (router->getType() == SKYCAL_R)
-		os << C_MDT << ")" << endl;
-	else
-		os << TS_MDT << ")" << endl;
+	// So far, only the routing-based synthesis router uses cycles as it's module-length delta (removed from master trunk)
+	os << TS_MDT << ")" << endl;
 
 	os << endl << "// Reconfigurable Resources" << endl;
 	for (unsigned i = 0; i < rModules->size(); i++)
@@ -723,7 +720,7 @@ void FileOut::WriteRoutedDagAndArchToFile(DAG *dag, DmfbArch *arch, Router *rout
 
 	for (unsigned i = firstCycle; i <= lastCycle+1; i++)
 		os << cycleStrings.at(i - firstCycle)->str();
-		//os << cycleStrings.at(i - firstCycle)->str() << "Number of pins to activate = " << pinActivations->at(i)->size() << endl;
+	//os << cycleStrings.at(i - firstCycle)->str() << "Number of pins to activate = " << pinActivations->at(i)->size() << endl;
 	//os << cycleStrings.at(i - cycle)->str() << "Number of pins to activate = 1" << endl;
 
 	// Cleanup stringstreams
@@ -806,7 +803,7 @@ void FileOut::WriteInputtableDmfbArchToFile(DmfbArch *arch, string fileName)
 // for wire routing to an output file that can be read by the
 // Java visualizer tools
 ///////////////////////////////////////////////////////////////
-void FileOut::WriteHardwareFileWithWireRoutes(DmfbArch *arch, string fileName)
+void FileOut::WriteHardwareFileWithWireRoutes(DmfbArch *arch, string fileName, bool includeWireRouting)
 {
 	ofstream os;
 	os.open(fileName.c_str());
@@ -877,29 +874,31 @@ void FileOut::WriteHardwareFileWithWireRoutes(DmfbArch *arch, string fileName)
 			os << "RESOURCELOCATION (" << (int)ar->at(i)->at(j)->resourceType << ", " << ar->at(i)->at(j)->leftX << ", " << ar->at(i)->at(j)->topY << ", " << ar->at(i)->at(j)->rightX << ", " << ar->at(i)->at(j)->bottomY << ", " << ar->at(i)->at(j)->tiledNum << ")" << endl;
 
 
-	//NUMVTRACKS (3)
-
-	os << endl << "// Wire-segment descriptions" << endl;
-	os << "WIREGRIDDIM (" << a->getWireRouter()->getModel()->getWireGridXSize() << ", " << a->getWireRouter()->getModel()->getWireGridYSize() << ")" << endl;
-	os << "NUMHTRACKS (" << a->getWireRouter()->getNumHorizTracks() << ")" << endl;
-	os << "NUMVTRACKS (" << a->getWireRouter()->getNumVertTracks() << ")" << endl;
-	//int tSize = a->getWireRouter()->getModel()->getTileGridSize();
-	//os << "WIREGRIDDIM (" << ((a->getNumCellsX()-1)*(tSize-1))+1 << ", " << ((a->getNumCellsY()-1)*(tSize-1))+1 << ")" << endl;
-	vector< vector<WireSegment *> *> *wires = a->getWireRouter()->getWireRoutesPerPin();
-	for (unsigned i = 0; i < wires->size(); i++)
+	// Output wire routing info if it has been generated
+	if (includeWireRouting)
 	{
-		vector<WireSegment *> *wire = wires->at(i);
-		for (unsigned j = 0; j < wire->size(); j++)
+		os << endl << "// Wire-segment descriptions" << endl;
+		os << "WIREGRIDDIM (" << a->getWireRouter()->getModel()->getWireGridXSize() << ", " << a->getWireRouter()->getModel()->getWireGridYSize() << ")" << endl;
+		os << "NUMHTRACKS (" << a->getWireRouter()->getNumHorizTracks() << ")" << endl;
+		os << "NUMVTRACKS (" << a->getWireRouter()->getNumVertTracks() << ")" << endl;
+		//int tSize = a->getWireRouter()->getModel()->getTileGridSize();
+		//os << "WIREGRIDDIM (" << ((a->getNumCellsX()-1)*(tSize-1))+1 << ", " << ((a->getNumCellsY()-1)*(tSize-1))+1 << ")" << endl;
+		vector< vector<WireSegment *> *> *wires = a->getWireRouter()->getWireRoutesPerPin();
+		for (unsigned i = 0; i < wires->size(); i++)
 		{
-			WireSegment *ws = wire->at(j);
+			vector<WireSegment *> *wire = wires->at(i);
+			for (unsigned j = 0; j < wire->size(); j++)
+			{
+				WireSegment *ws = wire->at(j);
 
-			if (ws->segmentType == LINE_WS)
-				os << "RELLINE (";
-			else
-				claim(false, "Unknown wire-segment type.");
+				if (ws->segmentType == LINE_WS)
+					os << "RELLINE (";
+				else
+					claim(false, "Unknown wire-segment type.");
 
-			os << ws->pinNo << ", " << ws->layer << ", " << ws->sourceWireCellX << ", " << ws->sourceWireCellY << ", " << ws->destWireCellX << ", " << ws->destWireCellY << ")" << endl;
+				os << ws->pinNo << ", " << ws->layer << ", " << ws->sourceWireCellX << ", " << ws->sourceWireCellY << ", " << ws->destWireCellX << ", " << ws->destWireCellY << ")" << endl;
 
+			}
 		}
 	}
 

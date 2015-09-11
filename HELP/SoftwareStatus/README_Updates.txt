@@ -16,6 +16,45 @@
 ***********************************************************************************************
 *                                        Revisions List                                       *
 ***********************************************************************************************
+Sept 10, 2015 (v3.2)
+General (applicable to multiple projects)
+-----------------------------------------
+(NONE)
+
+MFSimStatic Changes (C++)
+-------------------------
+- Cleaned up the main.cc file and added Demo.cc/Demo.h files with sample hard-coded methods to be called from main
+  for new users to learn how to call high-level methods more easily
+- Removed the simulated annealing placer which was not reliable
+- Added a new droplet router (cdma_full_router.cc/cdma_full_router.h) thanks to the work of Masruba Tasnim
+- Fixed memory leaks in path_finder_wire_rotuer.cc and yeh_wire_router.cc (thanks Zach Zimmerman)
+- Added 3 new pin-mappers, found in the following .h and/or .cc files thanks to Zach Zimmerman
+	- power_clique_pin_mapper				(pin-mapper)
+	- reliability_aware_pin_mapper				(pin-mapper)
+	- switching_aware_combined_wire_router_pin_mapper	(combined pin-mapper & wire-rotuer)
+	- pin_mapper_combined_wire_router			(used to support combined pin-mapper & wire-rotuers)
+	- wire_router_combined_pin_mapper			(used to support combined pin-mapper & wire-rotuers)
+	- flow_network_pin_mapper				(new base class used to support the new pin-mappers)
+- Small updates to Synthesis class to support new pin-mappers
+- Added new scheduler (genet_path_scheduler.cc/genet_path_scheduler.h), thanks to Ken O'Neal
+- Added a time-out feature to the genetic and rickett schedulers, thanks to Ken O'Neal
+- Added some compatibility checks to make sure a DAG is paired with the proper architecture
+	- Has any detectors, heaters and proper I/O ports needed by the DAG
+- Various small bug fixes and enhancements/modifications
+
+
+MFSimStaticGUI Changes (Java)
+-----------------------------
+(NONE)
+
+DmfbSimVisualizer Changes (Java)
+--------------------------------
+(NONE)
+
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+
 Jul 2, 2014 (v3.1)
 General (applicable to multiple projects)
 -----------------------------------------

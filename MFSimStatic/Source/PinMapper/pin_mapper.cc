@@ -45,6 +45,7 @@ PinMapper::PinMapper()
 	for (int i = 0; i <= RES_TYPE_MAX; i++)
 		availRes->push_back(new vector<FixedModule *>());
 	hasExecutableSyntesisMethod = true;
+	isCombinedWireRotuer = false;
 }
 PinMapper::PinMapper(DmfbArch *dmfbArch)
 {
@@ -60,6 +61,7 @@ PinMapper::PinMapper(DmfbArch *dmfbArch)
 	for (int i = 0; i <= RES_TYPE_MAX; i++)
 		availRes->push_back(new vector<FixedModule *>());
 	hasExecutableSyntesisMethod = true;
+	isCombinedWireRotuer = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -197,7 +199,7 @@ void PinMapper::setMapPreSched()
 ///////////////////////////////////////////////////////////////////////////////////
 // This function should be overridden; it is called just after routing.
 ///////////////////////////////////////////////////////////////////////////////////
-void PinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations)
+void PinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations, map<Droplet *, vector<RoutePoint *> *> *routes)
 {
 	initPinMapping();
 	setCustomMapping();

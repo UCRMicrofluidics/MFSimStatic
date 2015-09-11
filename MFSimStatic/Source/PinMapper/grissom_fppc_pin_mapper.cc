@@ -471,7 +471,7 @@ void GrissomFppcPinMapper::setMapPreSched()
 ///////////////////////////////////////////////////////////////////////////////////
 // This function should be overridden; it is called just after routing.
 ///////////////////////////////////////////////////////////////////////////////////
-void GrissomFppcPinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations)
+void GrissomFppcPinMapper::setMapPostRoute(vector<vector<int> *> *pinActivations, map<Droplet *, vector<RoutePoint *> *> *routes)
 {
 	// Do nothing...mapping set at beginning.
 }

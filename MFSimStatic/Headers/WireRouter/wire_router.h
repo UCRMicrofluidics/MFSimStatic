@@ -29,6 +29,7 @@
 #include "../Models/diagonal_wire_routing_model.h"
 #include "../Models/dmfb_arch.h"
 #include "../Resources/structs.h"
+#include "paths.h"
 #include "wire_segment.h"
 #include <vector>
 
@@ -53,11 +54,13 @@ class WireRouter
 		int getNumVertTracks() { return numVertTracks; }
 		void setArch(DmfbArch *da) { arch = da; }
 		WireRouteType getType() { return type; }
+		void setType(WireRouteType wrt) { type = wrt; }
 		bool hasExecutableSynthMethod() { return hasExecutableSyntesisMethod; }
 		void setHasExecutableSynthMethod(bool hasMethod) { hasExecutableSyntesisMethod = hasMethod; }
 
 		// Methods
-		virtual void computeWireRoutes(vector<vector<int> *> *pinActivations);
+		virtual void computeWireRoutes(vector<vector<int> *> *pinActivations, bool isIterative);
+		virtual vector<vector<Path*> >* getLayers();
 
 	protected:
 		// Members

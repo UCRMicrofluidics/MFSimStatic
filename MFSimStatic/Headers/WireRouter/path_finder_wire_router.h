@@ -17,9 +17,10 @@
  * Name: Path-finder Wire Router				 								*
  * 																				*
  * Detailed in the following paper:												*
- * Authors: 																	*
- * Title: 																		*
- * Publication Details: 														*
+ * Authors: Jeff McDaniel, Dan Grissom and Philip Brisk							*
+ * Title: Multi-terminal PCB Escape Routing for Digital Microfluidic Biochips	*
+ * using Negotiated Congestion													*
+ * Publication Details: VLSI-SoC, Playa Del Carmen, Mexico, Oct 6-8, 2014		*
  * 																				*
  * Details: Uses a modified version of Path-Finder to compute routes between	*
  * pin groupings, and then between those groupings and an edge.	This is an		*
@@ -43,7 +44,7 @@
 	// kCleanRoute 1: on 0: off
 	// Clean Route will use the original method first to determine which routes fit
 	// on the layer, then clear the history cost and re-route only those routes in
-	// an attempt to clean up the routes. //TODO: Currently not implemented or tested.
+	// an attempt to clean up the routes. 
 #define kCleanRoute 0
 	// kCheaperDiagonalCost 1: on 0: off
 	// Cheaper Diagonal Cost will make the diagonal edges of the tile cheaper
@@ -77,10 +78,7 @@ class PathFinderWireRouter : public WireRouter
 		// Methods
 		void pathfinder(vector<WireRouteNode*> allNodes, map<int, vector<WireRouteNode*>* > pinGroups, WireRouteNode* super_escape,bool allowFails = false);
 		void leeMazeRouting(int pin_number,double pfac,WireRouteNode* source, vector<WireRouteNode*> sinks, int iterationNum,Path* new_route);
-		void layeredPathfinder(DiagonalWireRoutingModel* model);
-
 		vector<WireRouteNode*> fillGrid(int pin_number,double pfac,Path* source, vector<WireRouteNode*>* sinks);
-		void convertWireSegments(vector<vector<Path*> >* layers,vector<vector<WireSegment*>*>* wires);
 		int isSink(WireRouteNode* node,vector<WireRouteNode*>* sinks);
 		bool traceBack(double pfac,WireRouteNode* sink,Path* sources, int iterationNum);
 		void append(Path* original, vector<WireRouteNode*>* appended);
@@ -88,16 +86,25 @@ class PathFinderWireRouter : public WireRouter
 		void clearHistory(vector<WireRouteNode*>* allNodes);
 		int historyCost(int old_history,int occupancy);
 		void printPath(vector<WireRouteNode*>* path);
+		void clearPaths(vector<Path*>* paths, vector<Path*>* best_layer);
 
 		/* Tile Cost Helper function */
 		void change_tile_costs(vector<WireRouteNode*>& allNodes);
 
+	protected:
+		// Members
+		void layeredPathfinder(DiagonalWireRoutingModel* model);
+		void convertWireSegments(vector<vector<Path*> >* layers,vector<vector<WireSegment*>*>* wires);
+
 	public:
 		// Constructors
+		PathFinderWireRouter() {arch = NULL;}
 		PathFinderWireRouter(DmfbArch *dmfbArch);
 		virtual ~PathFinderWireRouter();
 
 		// Methods
-		void computeWireRoutes(vector<vector<int> *> *pinActivations);
+		vector<vector<Path*> >* getLayers() {return &layers;}
+		void computeWireRoutes(vector<vector<int> *> *pinActivations, bool isIterative);
+		//void computeWireRoutesTest();
 };
 #endif /* PATH_FINDER_WIRE_ROUTER_H_ */

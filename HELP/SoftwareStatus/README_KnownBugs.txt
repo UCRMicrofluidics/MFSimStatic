@@ -16,6 +16,16 @@
 ***********************************************************************************************
 *                                        Bugs List                                            *
 ***********************************************************************************************
+Jul 17, 2015
+| KNOWN ISSUES |
+- Number of wire-routing tracks in switching_aware_combined_wire_router_pin_mapper are hardcoded to 3
+  b/c framework does not currently support setting those values before the Synthesis::WireRoute() 
+  method is called (as standalone method); will work properly if run via Synthesis::EntireFlow(), but
+  not via Synthesis::WireRoute(). 
+
+| FIXED |
+- Memory leaks in path_finder_wire_rotuer.cc and yeh_wire_router.cc (thanks Zach Zimmerman)
+
 Oct 22, 2013
 | KNOWN ISSUES |
 - Nodes with 2+ dispense parents of the same type may cause the scheduler to crash if there are

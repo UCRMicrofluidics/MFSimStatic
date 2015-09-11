@@ -67,12 +67,10 @@ DmfbArch::~DmfbArch()
 
 }
 
-
-
 ///////////////////////////////////////////////////////////////
 // Determine if input exists
 ///////////////////////////////////////////////////////////////
-IoPort * DmfbArch::getInput(string fluidName)
+IoPort * DmfbArch::getIoPort(string fluidName)
 {
 	for (unsigned i=0; i < ioPorts->size(); i++)
 	{
@@ -81,4 +79,22 @@ IoPort * DmfbArch::getInput(string fluidName)
 			return p;
 	}
 	return NULL;
+}
+
+///////////////////////////////////////////////////////////////
+// Determine if arch has heaters or detectors
+///////////////////////////////////////////////////////////////
+bool DmfbArch::hasHeaters()
+{
+	for (int i = 0; i < externalResources->size(); i++)
+		if (externalResources->at(i)->getResourceType() == H_RES || externalResources->at(i)->getResourceType() == DH_RES)
+			return true;
+	return false;
+}
+bool DmfbArch::hasDetectors()
+{
+	for (int i = 0; i < externalResources->size(); i++)
+		if (externalResources->at(i)->getResourceType() == D_RES || externalResources->at(i)->getResourceType() == DH_RES)
+			return true;
+	return false;
 }

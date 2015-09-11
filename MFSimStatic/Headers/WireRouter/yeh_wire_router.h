@@ -16,10 +16,13 @@
  * Type: Wire Router															*
  * Name: Path-finder Wire Router				 								*
  * 																				*
- * Detailed in the following paper:												*
- * Authors: 																	*
- * Title: 																		*
- * Publication Details: 														*
+ * Inferred from the following paper:											*
+ * Authors: Sheng-Han Yeh, Jia-Wen Chang, Tsung-Wei Huang, Shang-Tsung Yu and	*
+ * Tsung-Yi Ho																	*
+ * Title: Voltage-Aware Chip-Level Design for Reliability-Driven				*
+ * Pin-Constrained EWOD Chips													*
+ * Publication Details: IEEE Trans. on CAD of Integrated Circuits and Systems	*
+ * 33(9): 1302-1315 (2014)														*
  * 																				*
  * Details: Uses a modified version of Path-Finder to compute routes between	*
  * pin groupings, and then between those groupings and an edge.	This is an		*
@@ -58,8 +61,8 @@ class YehWireRouter : public WireRouter
 		void changeSharing(vector<Path*>* paths,bool allowed);
 		void rip_up_route(Path* ripped);
 
-		vector<WireRouteNode*> fillGrid(int pin_number,double pfac,Path* source, vector<WireRouteNode*>* sinks);
-		void leeMazeRouting(int pin_number,double pfac,WireRouteNode* source, vector<WireRouteNode*> sinks, int iterationNum,Path* new_path);
+		vector<WireRouteNode*>* fillGrid(int pin_number,double pfac,Path* source, vector<WireRouteNode*>* sinks, bool sharingAllowed);
+		void leeMazeRouting(int pin_number,double pfac,WireRouteNode* source, vector<WireRouteNode*> sinks, int iterationNum,Path* new_path, bool sharingAllowed);
 		void convertWireSegments(vector<vector<Path*> >* layers,vector<vector<WireSegment*>*>* wires);
 		void layeredYeh(DiagonalWireRoutingModel* model);
 		int isSink(WireRouteNode* node,vector<WireRouteNode*>* sinks);
@@ -73,11 +76,16 @@ class YehWireRouter : public WireRouter
 		void printPath(vector<WireRouteNode*>* path);
 
 	public:
+		//TODO: move these to private. implement setters/getters
+
 		// Constructors
+		YehWireRouter();
 		YehWireRouter(DmfbArch *dmfbArch);
 		virtual ~YehWireRouter();
 
 		// Methods
-		void computeWireRoutes(vector<vector<int> *> *pinActivations);
+		vector<vector<Path*> >* getLayers() {return &layers;}
+		void computeWireRoutes(vector<vector<int> *> *pinActivations, bool isIterative);
+		//void computeWireRoutesTest();
 };
 #endif /* YEH_WIRE_ROUTER_H_ */

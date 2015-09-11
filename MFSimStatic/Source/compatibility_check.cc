@@ -36,7 +36,7 @@
 // Checks to be done to check parameters just before scheduling.
 // NOTE: Developers should add more checks as they create new synthesis methods.
 //////////////////////////////////////////////////////////////////////////////
-void CompatChk::PreScheduleChk(Scheduler *s, DmfbArch *arch, bool runAsEntireFlow)
+void CompatChk::PreScheduleChk(Scheduler *s, DmfbArch *arch, DAG *dagToSchedule, bool runAsEntireFlow)
 {
 	// Using the field-programmable pin-constrained scheduler...
 	if (s->getType() == FPPC_S)
@@ -45,11 +45,45 @@ void CompatChk::PreScheduleChk(Scheduler *s, DmfbArch *arch, bool runAsEntireFlo
 		PinMapType pmt = arch->getPinMapper()->getType();
 		claim(pmt == ORIGINAL_FPPC_PM || pmt == ENHANCED_FPPC_PIN_OPT_PM || pmt == ENHANCED_FPPC_ROUTE_OPT_PM, "The field-programmable pin-constrained (FPPC) scheduler must be paired with the FPPC pin-mapper.");
 	}
-	else if (s->getType() == SKYCAL_R)
-		claim(runAsEntireFlow, "The routing-based-synthesis scheduler must be run as an entire flow with its corresponding placer/router.");
 
 	// General checks
 	claim(s->getMaxStoragePerModule() >= 1, "Must set the max storage per module to at least 1 droplet.");
+
+	// Ensure there is at least one external resource for each type of special operation
+	if (dagToSchedule->requiresDetector())
+	{
+		stringstream ss("");
+		ss << "The assay requires detectors, but the supplied architecure file (" << arch->getName() << ") has none.";
+		claim(arch->hasDetectors(), ss.str());
+	}
+	if (dagToSchedule->requiresHeater())
+	{
+		stringstream ss("");
+		ss << "The assay requires heaters, but the supplied architecure file (" << arch->getName() << ") has none.";
+		claim(arch->hasHeaters(), ss.str());
+	}
+
+	// Ensure that the DMFB architecture has an Input/Output for every fluid required
+	for (int i = 0; i < dagToSchedule->getAllInputNodes().size(); i++)
+	{
+		AssayNode *node = dagToSchedule->getAllInputNodes().at(i);
+		if (node->GetType() == DISPENSE)
+		{
+			stringstream ss("");
+			ss << "The assay requires an input reservoir of fluid type \"" << node->GetPortName() << "\", but the supplied architecure file (" << arch->getName() << ") has none.";
+			claim(arch->getIoPort(node->GetPortName()) != NULL, ss.str());
+		}
+	}
+	for (int i = 0; i < dagToSchedule->getAllOutputNodes().size(); i++)
+	{
+		AssayNode *node = dagToSchedule->getAllOutputNodes().at(i);
+		if (node->GetType() == OUTPUT)
+		{
+			stringstream ss("");
+			ss << "The assay requires an output reservoir named \"" << node->GetPortName() << "\", but the supplied architecure file (" << arch->getName() << ") has none.";
+			claim(arch->getIoPort(node->GetPortName()) != NULL, ss.str());
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -72,12 +106,6 @@ void CompatChk::PrePlaceChk(Placer *p, DmfbArch *arch, bool runAsEntireFlow)
 		claim(p->getMaxStoragePerModule() <= 4, "The modules in the binders do not support  more than 2 droplets per module.");
 	else
 		claim(p->getMaxStoragePerModule() <= 4, "The modules in the free-placers only support up to 4 droplets per module.");
-
-	if (p->getType() == SKYCAL_P)
-	{
-		claim(runAsEntireFlow, "The routing-based-synthesis placer must be run as an entire flow with its corresponding scheduler/router.");
-		claim(p->getPastSchedType() == SKYCAL_S, "The routing-based-synthesis placer must be paired with the routing-based-synthesis scheduler.");
-	}
 
 	// General checks
 	claim(p->getHCellsBetweenModIR() >= 0 && p->getVCellsBetweenModIR() >= 0, "Cannot have a negative distance between module interference regions (IRs).");
@@ -110,13 +138,8 @@ void CompatChk::PreRouteChk(Router *r, DmfbArch *arch, bool runAsEntireFlow)
 	}
 	else if (r->getType() == GRISSOM_FIX_R || r->getType() == GRISSOM_FIX_MAP_R)
 		claim(arch->getPinMapper()->getResAllocType() == GRISSOM_FIX_1_RA, "The 'GRISSOM_FIX_R' and 'GRISSOM_FIX_MAP_R' routers are only compatible with the 'GRISSOM_FIX_1_RA' resource allocation type.");
-	else if (r->getType() == SKYCAL_R)
-	{
-		claim(runAsEntireFlow, "The routing-based-synthesis router must be run as an entire flow with its corresponding scheduler/placer.");
-		claim(r->getPastSchedType() == SKYCAL_S, "The routing-based-synthesis router must be paired with the routing-based-synthesis scheduler.");
-		claim(r->getPastPlacerType() == SKYCAL_P, "The routing-based-synthesis router must be paired with the routing-based-synthesis placer.");
-		claim(r->getCompactionType() == INHERENT_COMP, "The routing-based-synthesis router must be paired with the inherent compaction type.");
-	}
+	else if (r->getType() == CDMA_FULL_R)
+		claim(r->getCompactionType() == INHERENT_COMP, "The CDMA router must be paried with the inherent compaction type.");
 	else
 	{
 		claim(r->getCompactionType() != INHERENT_COMP, "You must select the 'Beginning', 'Middle', or 'No' compaction type.");
@@ -128,7 +151,6 @@ void CompatChk::PreRouteChk(Router *r, DmfbArch *arch, bool runAsEntireFlow)
 		set<RouterType> washableTypes;
 		washableTypes.insert(FPPC_SEQUENTIAL_R);
 		washableTypes.insert(FPPC_PARALLEL_R);
-		washableTypes.insert(SKYCAL_R);
 
 		claim(washableTypes.count(r->getType()) > 0, "Router type does not implement wash droplet handling. Please select another router.");
 
@@ -137,7 +159,7 @@ void CompatChk::PreRouteChk(Router *r, DmfbArch *arch, bool runAsEntireFlow)
 	// If used a binder for placement (with fixed placement), use proper processing engine(s)...
 	if (r->getPastPlacerType() == GRISSOM_LE_B || r->getPastPlacerType() == GRISSOM_PATH_B)
 		claim(r->getProcEngineType() == FIXED_PE, "A binder was used for placing, so a 'Fixed (-module)' processing engine must be used.");
-	else if (r->getPastPlacerType() == KAMER_LL_P || r->getPastPlacerType() == SA_P)
+	else if (r->getPastPlacerType() == KAMER_LL_P)
 		claim(r->getProcEngineType() == FREE_PE, "A free-placer was used for placing, so a 'Free (-module)' processing engine must be used.");
 
 	if (r->getCompactionType() == CHO_COMP)
@@ -153,10 +175,12 @@ void CompatChk::PreWireRouteChk(DmfbArch *arch, bool runAsEntireFlow)
 	if (arch->getWireRouter()->getType() == ENHANCED_FPPC_WR)
 		claim(arch->getPinMapper()->getType() == ENHANCED_FPPC_PIN_OPT_PM || arch->getPinMapper()->getType() == ENHANCED_FPPC_ROUTE_OPT_PM, "Must be using one of the enhanced FPPC pin-mapping types if using the enhanced FPPC wire router.");
 
+	if (arch->getPinMapper()->getType() == SWITCH_PM)
+		claim(arch->getWireRouter()->getType() == PIN_MAPPER_INHERENT_WR, "Must select the Pin-mapper Inherent WireRouter (or forgo the independent wire routing stage) in the wire routing stage when using a joint pin-mapper/wire-router such as the Switch-Aware pin-mapper/wire-router.");
+
 	// These checks are made in the wire_router
 	//claim(arch->getWireRouter()->getNumHorizTracks() > 1, "Number of horizontal wire routing tracks must be greater than 1.");
 	//claim(arch->getWireRouter()->getNumVertTracks() > 1, "Number of vertical wire routing tracks must be greater than 1.");
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -165,7 +189,7 @@ void CompatChk::PreWireRouteChk(DmfbArch *arch, bool runAsEntireFlow)
 //////////////////////////////////////////////////////////////////////////////
 bool CompatChk::CanPerformRouteAnalysis(Router *r)
 {
-	if(r->getType() == FPPC_SEQUENTIAL_R || r->getType() == FPPC_PARALLEL_R || r->getType() == SKYCAL_R)
+	if(r->getType() == FPPC_SEQUENTIAL_R || r->getType() == FPPC_PARALLEL_R)
 		return false;
 	else
 		return true;
@@ -178,8 +202,5 @@ bool CompatChk::CanPerformRouteAnalysis(Router *r)
 //////////////////////////////////////////////////////////////////////////////
 bool CompatChk::CanPerformCompactSimulation(Router *r)
 {
-	if(r->getType() == SKYCAL_R)
-		return false;
-	else
-		return true;
+	return true;
 }

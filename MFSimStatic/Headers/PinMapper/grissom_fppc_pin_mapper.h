@@ -43,7 +43,7 @@ class GrissomFppcPinMapper : public PinMapper
 		void setCustomMapping();
 		void setEnhancedCustomMapping();
 		void setMapPreSched();
-		void setMapPostRoute(vector<vector<int> *> *pinActivations);
+		void setMapPostRoute(vector<vector<int> *> *pinActivations, map<Droplet *, vector<RoutePoint *> *> *routes);
 		void flattenSpecialPurposePins();
 		void unflattenSpecialPurposePins();
 

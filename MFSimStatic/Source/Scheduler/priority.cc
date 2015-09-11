@@ -94,11 +94,11 @@ void Priority::recursiveCPD(DmfbArch *arch, AssayNode *node, unsigned childDist)
 {
 	if (node->GetType() == DISPENSE)
 	{
-		IoPort *iop = arch->getInput(node->portName);
+		IoPort *iop = arch->getIoPort(node->portName);
 		stringstream ss;
 		ss << "No input available in given architecture with fluid-type of " << node->portName << endl;
 		claim (iop, &ss);
-		node->cycles = arch->getInput(node->portName)->getTimeInSec() * arch->getFreqInHz();
+		node->cycles = arch->getIoPort(node->portName)->getTimeInSec() * arch->getFreqInHz();
 	}
 
 	node->priority = max(node->priority, childDist + node->cycles);

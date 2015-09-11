@@ -487,6 +487,7 @@ string Analyze::AnalyzePlacement(DmfbArch *arch, vector<ReconfigModule *> *rModu
 	Sort::sortReconfigModsByStartThenEndTS(rModules);
 
 	// First, set all nodes bound to module as unbound to make sure only bound to a single module
+	vector<AssayNode *> modifiedNodes;
 	for (unsigned i = 0; i < rModules->size(); i++)
 	{
 		ReconfigModule *ra = rModules->at(i);
@@ -525,8 +526,10 @@ string Analyze::AnalyzePlacement(DmfbArch *arch, vector<ReconfigModule *> *rModu
 		}
 
 		if (boundNode)
+		{
 			boundNode->status = UNBOUND_UNSCHED; // Mark as unscheduled for now to ensure multiple modules are not bound to it
-
+			modifiedNodes.push_back(boundNode);
+		}
 	}
 
 
@@ -631,6 +634,10 @@ string Analyze::AnalyzePlacement(DmfbArch *arch, vector<ReconfigModule *> *rModu
 			}
 		}
 	}
+
+	// Undo Unbinding status from earlier
+	for (int i = 0; i < modifiedNodes.size(); i++)
+		modifiedNodes.at(i)->SetStatus(BOUND);
 
 	// Cleanup
 	while (!board->empty())

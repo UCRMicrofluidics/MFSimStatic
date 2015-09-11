@@ -659,10 +659,11 @@ DiagonalWireRoutingModel::~DiagonalWireRoutingModel()
 	pinGroups->clear();
 	delete pinGroups;
 
-	delete superEscape;
+	//delete superEscape; // This is deleted in the following for loop code and will cause a segfault if uncommented
 
 	for (int i = 0; i < allNodes->size(); i++)
 		delete allNodes->at(i);
+
 	allNodes->clear();
 
 	delete allNodes;

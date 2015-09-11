@@ -38,6 +38,7 @@ WireRouter::WireRouter()
 	numVertTracks = 0;
 	type = NONE_WR;
 	hasExecutableSyntesisMethod = true;
+	model = NULL;
 }
 WireRouter::WireRouter(DmfbArch *dmfbArch)
 {
@@ -48,6 +49,7 @@ WireRouter::WireRouter(DmfbArch *dmfbArch)
 	numVertTracks = 0;
 	type = NONE_WR;
 	hasExecutableSyntesisMethod = true;
+	model = NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +86,9 @@ WireRouter::~WireRouter()
 		delete pinWires;
 	}
 	delete wireRoutesPerPin;
-	delete model;
+
+	if (model)
+		delete model;
 
 	/*if (pinCoords)
 	{
@@ -137,10 +141,19 @@ WireRouter::~WireRouter()
 // access to the pin activations list in case this algorithm needs to modify the
 // pin-mapping itself.
 ///////////////////////////////////////////////////////////////////////////////////
-void WireRouter::computeWireRoutes(vector<vector<int> *> *pinActivations)
+void WireRouter::computeWireRoutes(vector<vector<int> *> *pinActivations, bool isIterative)
 {
 	//computePinCoords();
 	//cout << "No wire-router implemented; no wire routes generated." << endl;
-	claim(false, "No valid wire-router was selected for the synthesis process or no method for 'computeWireRoutes()' was implemented for the selected scheduler.\n");
+	claim(false, "No valid wire-router was selected for the synthesis process or no method for 'computeWireRoutes()' was implemented for the selected wire router.\n");
 
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+// This method returns layers of containing wire networks (Paths). This header is
+// here to support templating in classes such as combined_wire_rotuer.h.
+///////////////////////////////////////////////////////////////////////////////////
+vector<vector<Path*> >* WireRouter::getLayers()
+{
+	claim(false, "No valid wire-router was selected for the synthesis process or no method for 'getLayers()' was implemented for the selected wire router.\n");
 }

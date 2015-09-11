@@ -74,9 +74,7 @@ class ReconfigModule : public Entity
 		friend class GrissomPathBinder;
 		friend class GrissomLEBinder;
 		friend class KamerLlPlacer;
-		friend class SAPlacer;
 		friend class FileOut;
 		friend class FileIn;
-		friend class SkyCalRouter;
 };
 #endif /* _RECONFIG_MODULE_H */

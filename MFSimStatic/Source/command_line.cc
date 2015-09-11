@@ -36,35 +36,32 @@ CmdLine::CmdLine()
 	// Create library for schedulers
 	sKeys.push_back("LS"); sDescrips.push_back("List Scheduling"); sEnums.push_back(LIST_S);
 	sKeys.push_back("PS"); sDescrips.push_back("Grissom's Path Scheduling"); sEnums.push_back(PATH_S);
-	sKeys.push_back("GA"); sDescrips.push_back("Genetic Algorithm Scheduling"); sEnums.push_back(GENET_S);
-	sKeys.push_back("RGA"); sDescrips.push_back("Rickett's Genetic Algorithm Scheduling"); sEnums.push_back(RICKETT_S);
+	sKeys.push_back("GAS"); sDescrips.push_back("Genetic Algorithm Scheduling"); sEnums.push_back(GENET_S);
+	sKeys.push_back("GAPS"); sDescrips.push_back("Genetic Algorithm Path Scheduling"); sEnums.push_back(GENET_PATH_S);
+	sKeys.push_back("RGAS"); sDescrips.push_back("Rickett's Genetic Algorithm Scheduling"); sEnums.push_back(RICKETT_S);
 	sKeys.push_back("FDLS"); sDescrips.push_back("O' Neal's Force Directed List Scheduler"); sEnums.push_back(FD_LIST_S);
 	sKeys.push_back("FPPCS"); sDescrips.push_back("List Scheduling for FPPC Design"); sEnums.push_back(FPPC_S);
 	sKeys.push_back("FPPCPS"); sDescrips.push_back("Path Scheduling for Field-Programmable, Pin-Constrained Design"); sEnums.push_back(FPPC_PATH_S);
 	sKeys.push_back("RTELS"); sDescrips.push_back("Real-Time Evaluation List Scheduling"); sEnums.push_back(RT_EVAL_LIST_S);
-	sKeys.push_back("CSS"); sDescrips.push_back("Calvin & Skyler's Routing Based Synthesis Scheduler"); sEnums.push_back(SKYCAL_S);
 	//sKeys.push_back("X"); sDescrips.push_back("Add New Scheduling Method Here"); sEnums.push_back(NEW_S);
 
 	// Create library for placers
-	pKeys.push_back("SAP"); pDescrips.push_back("Simulated Annealing Placement"); pEnums.push_back(SA_P);
 	pKeys.push_back("KLLP"); pDescrips.push_back("KAMER Linked-List Placement"); pEnums.push_back(KAMER_LL_P);
 	pKeys.push_back("GLEB"); pDescrips.push_back("Grissom's Left Edge Binder"); pEnums.push_back(GRISSOM_LE_B);
 	pKeys.push_back("GPB"); pDescrips.push_back("Grissom's Path Binder"); pEnums.push_back(GRISSOM_PATH_B);
 	pKeys.push_back("FPPCLEB"); pDescrips.push_back("Grissom's Left Edge Binder for FPPC Design"); pEnums.push_back(FPPC_LE_B);
-	pKeys.push_back("CSP"); pDescrips.push_back("Calvin & Skyler's Routing Based Synthesis Placer"); pEnums.push_back(SKYCAL_P);
 	//pKeys.push_back("X"); pDescrips.push_back("Add New Placement Method Here"); pEnums.push_back(NEW_P);
 
-	// Create library for routers
+	// Create library for droplet routers
 	rKeys.push_back("RMR"); rDescrips.push_back("Grissom's Simplified Roy Maze Router"); rEnums.push_back(ROY_MAZE_R);
 	rKeys.push_back("BR"); rDescrips.push_back("Yuh's BioRouter (Network flow-based)"); rEnums.push_back(BIOROUTE_R);
 	rKeys.push_back("FPR"); rDescrips.push_back("Grissom's Fixed-Place Router"); rEnums.push_back(GRISSOM_FIX_R);
 	rKeys.push_back("FPMR"); rDescrips.push_back("Grissom's Fixed-Place Map Router"); rEnums.push_back(GRISSOM_FIX_MAP_R);
 	rKeys.push_back("CR"); rDescrips.push_back("Cho's Bypassability/Concession Router"); rEnums.push_back(CHO_R);
-	rKeys.push_back("ASR"); rDescrips.push_back("A* Router"); rEnums.push_back(CHO_R);
 	rKeys.push_back("FPPCSR"); rDescrips.push_back("Sequential Router for FPPC Design"); rEnums.push_back(FPPC_SEQUENTIAL_R);
 	rKeys.push_back("FPPCPR"); rDescrips.push_back("Parallel Router for FPPC Design"); rEnums.push_back(FPPC_PARALLEL_R);
 	rKeys.push_back("LR"); rDescrips.push_back("Lee's Router"); rEnums.push_back(LEE_R);
-	rKeys.push_back("CSR"); rDescrips.push_back("Calvin & Skyler's Routing Based Synthesis Router"); rEnums.push_back(SKYCAL_R);
+	rKeys.push_back("CDMAR"); rDescrips.push_back("CDMA Router"); rEnums.push_back(CDMA_FULL_R);
 	//rKeys.push_back("X"); rDescrips.push_back("Add New Router Method Here"); rEnums.push_back(NEW_R);
 
 	// Create library for resource-allocation types
@@ -81,13 +78,17 @@ CmdLine::CmdLine()
 	pmKeys.push_back("EFPPCPOPM"); pmDescrips.push_back("Pin-Optimized Pin-Mapper for Enhanced FPPC Design"); pmEnums.push_back(ENHANCED_FPPC_PIN_OPT_PM);
 	pmKeys.push_back("EFPPCROPM"); pmDescrips.push_back("Route-Optimized Pin-Mapper for Enhanced FPPC Design"); pmEnums.push_back(ENHANCED_FPPC_ROUTE_OPT_PM);
 	pmKeys.push_back("CPM"); pmDescrips.push_back("Clique Partioning Pin-Mapping"); pmEnums.push_back(CLIQUE_PM);
+	pmKeys.push_back("PPM"); pmDescrips.push_back("Power Aware Clique Pin-Mapping"); pmEnums.push_back(POWER_PM);
+	pmKeys.push_back("RAPM"); pmDescrips.push_back("Reliability Aware Clique Pin Mapping"); pmEnums.push_back(RELY_PM);
+	pmKeys.push_back("SWPM"); pmDescrips.push_back("Switching Aware Pin Mapping and Wire Routing"); pmEnums.push_back(SWITCH_PM);
 	//pmKeys.push_back("X"); pmDescrips.push_back("Add New Pin-Mapping Method Here"); pmEnums.push_back(NEW_PM);
 
 	// Create library for wire-routing types
 	wrKeys.push_back("NOWR"); wrDescrips.push_back("No Wire Routing"); wrEnums.push_back(NONE_WR);
+	wrKeys.push_back("PMIWR"); wrDescrips.push_back("Wire-router Inherent in Pin-Mapper"); wrEnums.push_back(PIN_MAPPER_INHERENT_WR);
 	wrKeys.push_back("PFWR"); wrDescrips.push_back("Path-Finder-Based Wire Routing"); wrEnums.push_back(PATH_FINDER_WR);
-	wrKeys.push_back("EFPPCWR"); wrDescrips.push_back("Enhanced FPPC Wire Routing"); wrEnums.push_back(ENHANCED_FPPC_WR);
 	wrKeys.push_back("YWR"); wrDescrips.push_back("Yeh's Wire Routing"); wrEnums.push_back(YEH_WR);
+	wrKeys.push_back("EFPPCWR"); wrDescrips.push_back("Enhanced FPPC Wire Routing"); wrEnums.push_back(ENHANCED_FPPC_WR);
 	//wrKeys.push_back("xWR"); wrDescrips.push_back("Add New Wire-Routing Method Here"); wrEnums.push_back(NEW_WR);
 
 	// Create library for compaction types

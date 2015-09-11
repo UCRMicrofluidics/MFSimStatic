@@ -1179,7 +1179,7 @@ void Router::compactRoutesWithDynamicProgramming(vector<Droplet *> *subDrops, ve
 			if(sameTarget)
 				ms2 += "xx";
 
-			cout<<"ms2: " << ms2 << endl;
+			//cout<<"ms2: " << ms2 << endl;
 			//Setting both before and after points to the first non-null point in the route.
 			RoutePoint* p11 = new RoutePoint();
 			RoutePoint* p12 = new RoutePoint();
