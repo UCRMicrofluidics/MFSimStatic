@@ -1,7 +1,6 @@
 #include "../../Headers/Scheduler/ilp_scheduler.h"
 #include <cstring>
 #include <stdio.h>  /* defines FILENAME_MAX */
-#include <stdio.h>  /* defines FILENAME_MAX */
 #ifdef WINDOWS
 #include <direct.h>
 #define GetCurrentDir _getcwd
@@ -1571,15 +1570,15 @@ void ILPScheduler::setTiming(DmfbArch * arch, DAG * dag, vector<DelayVal> delays
 void ILPScheduler::bindResources(DmfbArch * arch, DAG * dag,
 		vector<DelayVal> delays, vector<double> StartTimes, int objective_val) {
 	getAvailResources(arch);
-
+	commissionDAG(dag);
 	unsigned schedTS = 0;
+
 	vector<AssayNode*>::iterator it = dag->allNodes.begin();
 	vector<AssayNode*>::iterator it2 = dag->allNodes.begin();
 	while ((int)schedTS <= objective_val) {
 		it = dag->allNodes.begin();
 		for (; it != dag->allNodes.end(); it++) {
 			AssayNode *node = *it;
-
 			if (node->GetEndTS() == schedTS) {
 				if (node->boundedResType == BASIC_RES) {
 					availRes[BASIC_RES]++;
@@ -1600,7 +1599,8 @@ void ILPScheduler::bindResources(DmfbArch * arch, DAG * dag,
 				if ((n->type == SPLIT || n->type == MIX)
 						&& (availRes[BASIC_RES] + availRes[D_RES]
 								+ availRes[H_RES] + availRes[DH_RES]) > 0) {
-					//std::cout<<"assay node being bound in SPLIT is: "<<n->name<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl;
+					//std::cout<<"assay node being bound in SPLIT is: "<<n->name
+					//<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl; //KNLO Debug
 					if (availRes[BASIC_RES] > 0) {
 						availRes[BASIC_RES]--;
 						n->boundedResType = BASIC_RES;
@@ -1610,51 +1610,62 @@ void ILPScheduler::bindResources(DmfbArch * arch, DAG * dag,
 					} else if (availRes[D_RES] > 0) {
 						availRes[D_RES]--;
 						n->boundedResType = D_RES;
-					} else {
+					} else if (availRes[DH_RES] >0) {
 						availRes[DH_RES]--;
 						n->boundedResType = DH_RES;
+					} else {
+						//cout<<"No available res in SPLIT MIX branch"<<flush<<endl; //KNLO Debug
 					}
 				} else if (n->type == DETECT
 						&& (availRes[D_RES] + availRes[DH_RES]) > 0) {
-					//std::cout<<"assay node being bound in DETECT is: "<<n->name<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl;
+					//std::cout<<"assay node being bound in DETECT is: "<<n->name
+					//<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl; //KNLO Debug
 					if (availRes[D_RES] > 0) {
 						availRes[D_RES]--;
 						n->boundedResType = D_RES;
-					} else {
+					} else if (availRes[DH_RES] > 0) {
 						availRes[DH_RES]--;
 						n->boundedResType = DH_RES;
+					} else {
+						//cout<<"No available res in DETECT branch"<<flush<<endl; //KNLO Debug
 					}
 				} else if (n->type == HEAT
 						&& (availRes[H_RES] + availRes[DH_RES]) > 0) {
-					//std::cout<<"assay node being bound in HEAT is: "<<n->name<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl;
+					//std::cout<<"assay node being bound in HEAT is: "<<n->name
+					//<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl; //KNLO Debug
 					if (availRes[H_RES] > 0) {
 						availRes[H_RES]--;
 						n->boundedResType = H_RES;
-					} else {
+					} else if (availRes[DH_RES] > 0) {
 						availRes[DH_RES]--;
 						n->boundedResType = DH_RES;
+					} else {
+						//cout<<"No available res in HEAT branch"<<flush<<endl; //KNLO Debug
 					}
 				} else if (n->type == OUTPUT){
-					//std::cout<<"assay node being bound in OUTPUT is: "<<n->name<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl;
-					//std::cout<<"output detected in bind resources; node: "<<n->name<<flush<<endl;
+					//std::cout<<"assay node being bound in OUTPUT is: "<<n->name
+					//<<", of type: "<<n->type<<"with status: "<<n->status<<", and res type" <<n->boundedResType<<flush<<endl; //KNLO Debug
+					//std::cout<<"output detected in bind resources; node: "<<n->name<<flush<<endl; //KNLO Debug
 				}
 				else{
-					//std::cout<<"assay node being bound in ELSE is: "<<n->name<<", of type: "<<n->type<<"with status: "<<n->status<<flush<<endl;
-					//std::cout<<"unhandled typed detected in bind resources; node: "<<n->name<<"with type: "<<n->type<<flush<<endl;
-					//exit(1);
+					//std::cout<<"assay node being bound in ELSE is: "<<n->name
+					//<<", of type: "<<n->type<<"with status: "<<n->status<<", and res type" << n->boundedResType<<flush<<endl; //KNLO Debug
+					//std::cout<<"unhandled typed detected in bind resources; node: "<<n->name
+					//<<"with type: "<<n->type<<flush<<endl; //KNLO Debug
 				}
 			}
 		}
 		schedTS = schedTS + 1;
 	}
 
-	for (unsigned i = 0; i < dag->allNodes.size(); i++) {
+	/*for (unsigned i = 0; i < dag->allNodes.size(); i++) {
 		if (dag->allNodes.at(i)->status != SCHEDULED) {
 			cout << "node at i = " << i << "not scheduled. Node = ";
 			dag->allNodes.at(i)->Print();
 			cout << endl;
 		}
-	}
+	} */ //KNLO Debug
+
 }
 
 ////////Ready the Dispense wells for input scheduling//////////
@@ -1692,12 +1703,12 @@ int ILPScheduler::storageNodeInsertion(DmfbArch * arch, DAG * dag,
 		for (unsigned p = 0; p < n->GetParents().size(); p++) {
 			AssayNode *parent = n->GetParents().at(p);
 			unsigned long long tempTS = parent->endTimeStep;
-			std::cout<<"parent is: "<<parent->name<<", for node: "<<n->name<<flush<<endl;
+			//std::cout<<"parent is: "<<parent->name<<", for node: "<<n->name<<flush<<endl; //KNLO Debug
 
 			if (tempTS < ((n->startTimeStep))) {
 				parentPush = n->GetParents().at(p);
 				AssayNode *store = dag->AddStorageNode();
-				std::cout<<"storage node added, n = "<<parentPush->name<<flush<<endl;
+				//std::cout<<"storage node added, n = "<<parentPush->name<<flush<<endl; //KNLO Debug
 				store->status = SCHEDULED;
 				store->startTimeStep = tempTS; //MinPTS;
 				store->endTimeStep = n->startTimeStep;
@@ -1831,7 +1842,6 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	//str = "C:\\Users\\Kenneth O'Neal\\Documents\\Proj2\\Microfluidics\\MFSIMMER_BACKUP\\MFSIMMER_RunWORKS\\MFSimStatic\\";
 	str = cCurrentPath;
 	str = str + "\\TestOutput";
-	std::cout<<"the current path only is: "<<cCurrentPath<<std::flush<<std::endl;
 	str = str + "\\" + dag->getName();
 	str = str + ".mod";
 
@@ -1931,17 +1941,17 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 
 	if (temp_solve == 0) {
 		cout << "successful OPTIMAL solve of LPSolve Model" << endl;
-		cerr << "successful OPTIMAL solve of LPSolve Model" << endl;
+		//cerr << "successful OPTIMAL solve of LPSolve Model" << endl; //KNLO Debug
 	} else if (temp_solve == 1) {
 		cout << "Feasible solution found" << flush << endl;
-		cerr << "Feasible solution found" << flush << endl;
+		//cerr << "Feasible solution found" << flush << endl; //KNLO Debug
 	} else {
 		cout << "TEMP SOLVE: " << temp_solve
 				<< ", failure to solve LPSolve Model with optimal or feasible solution"
 				<< endl;
-		cerr << "TEMP SOLVE: " << temp_solve
-				<< ", failure to solve LPSolve Model with optimal or feasible solution"
-				<< endl;
+		//cerr << "TEMP SOLVE: " << temp_solve
+				//<< ", failure to solve LPSolve Model with optimal or feasible solution"
+				//<< endl; //KNLO Debug
 		exit(1);
 	}
 
@@ -1950,12 +1960,12 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	//getting the variables of the model, will be used to perform framework details
 	get_variables(lp, Nvar);
 
-	if (false) {
+	/*if (false) { //KNLO DEBUG
 		for (int i = 0; i < get_Ncolumns(lp); i++) {
 			cout << "Schedule: StartTimesCol post solve i = " << i << ", "
 					<< get_col_name(lp, i + 1) << " : " << Nvar[i] << endl;
 		}
-	}
+	}*/
 
 	// establish start times for set timing
 	vector<double> StartTimes; //operations start times vector
@@ -1976,23 +1986,16 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	setTiming(arch, dag, delays, StartTimes, scheduleTime + 1);
 
 	//TODO:: currently storageNodeInsertion will cause proper placement, but segfault in routing
-	//TODO:: No storage node insertion causes improper binding in placement (due to gaps)
+	//TODO:: No storage node insertion causes improper binding in placement
+	//This occurs with other schedulers as well when running dilution assays
 	int dropsInStorage = storageNodeInsertion(arch, dag, delays, StartTimes);
 
 	bindResources(arch, dag, delays, StartTimes, scheduleTime + 1);
-	//bindResourcesRedo(arch, dag, delays, StartTimes, scheduleTime + 1);
-	/*for(unsigned i = 0; i < dag->allNodes.size(); i++)
-	{
-		std::cout<<"after binding: node name is: "<<dag->allNodes.at(i)->name<<", id is: "<<dag->allNodes.at(i)->id
-				 <<", boundedRestType is: "<<dag->allNodes.at(i)->boundedResType<<flush<<endl;
-	}*/
 	cout<<" LPSOLVE TS:  "<<scheduleTime<<flush<<endl;
-	cerr<<"LPSOLVE TS: "<<scheduleTime<<flush<<endl;
+	//cerr<<"LPSOLVE TS: "<<scheduleTime<<flush<<endl; //KNLO Debug
 	delete_lp(lp);
-	//storageNodeBinding(arch, dag, delays, StartTimes, scheduleTime + 1, dropsInStorage);
 
-	//dagReinitialize(dag);
-	//dag->PrintSchedule();
+	//dag->PrintSchedule(); //KNLO Debug
 
 	return 0;
 }
