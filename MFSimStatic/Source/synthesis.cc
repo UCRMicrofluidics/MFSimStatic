@@ -39,6 +39,7 @@
 #include "../Headers/Scheduler/genet_scheduler.h"
 #include "../Headers/Scheduler/list_scheduler.h"
 #include "../Headers/Scheduler/path_scheduler.h"
+#include "../headers/Scheduler/ilp_scheduler.h"
 #include "../Headers/Scheduler/scheduler.h"
 
 #include "../Headers/Placer/grissom_fppc_left_edge_binder.h"
@@ -814,6 +815,8 @@ Scheduler * Synthesis::getNewSchedulingMethod(SchedulerType st)
 		return new GrissomFppcPathScheduler();
 	else if (st == RT_EVAL_LIST_S)
 		return new RealTimeEvalListScheduler();
+	else if (st == ILP_S)
+		return new ILPScheduler(); //Todo:: change name to ILPScheduler
 	else
 		claim(false, "No valid scheduler type was specified.");
 }

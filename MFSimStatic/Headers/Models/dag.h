@@ -127,6 +127,7 @@ class DAG : public Entity
 		friend class ListScheduler;
 		friend class PathScheduler;
 		friend class FDLScheduler;
+		friend class ILPScheduler;
 		friend class PinMapper;
 		friend class Priority;
 		friend class Analyze;
