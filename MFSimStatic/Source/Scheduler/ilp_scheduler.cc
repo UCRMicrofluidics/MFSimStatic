@@ -1912,6 +1912,8 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	setRestVarMaxs(arch, dag, MaxTS, NumModules, NumHeat,
 			(NumDetect + NumDetectHeat), NumModules, fs);
 
+	ILPScheduler::setGeneralRestricts(arch, dag, MaxTS, NumModules, fs);
+
 	setObjective(dag->allNodes.size(), fs);
 
 	fs.close();
@@ -1960,12 +1962,6 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	//getting the variables of the model, will be used to perform framework details
 	get_variables(lp, Nvar);
 
-	/*if (false) { //KNLO DEBUG
-		for (int i = 0; i < get_Ncolumns(lp); i++) {
-			cout << "Schedule: StartTimesCol post solve i = " << i << ", "
-					<< get_col_name(lp, i + 1) << " : " << Nvar[i] << endl;
-		}
-	}*/
 
 	// establish start times for set timing
 	vector<double> StartTimes; //operations start times vector
@@ -1983,12 +1979,18 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 		StartTimes.push_back(Nvar[i]);
 	}
 
+	if (false) { //KNLO DEBUG
+		for (int i = startIndex; i < get_Ncolumns(lp); i++) {
+			cout << "Schedule: StartTimesCol post solve i = " << i << ", "
+					<< get_col_name(lp, i + 1) << " : " << Nvar[i] << endl;
+		}
+	}
+
 	setTiming(arch, dag, delays, StartTimes, scheduleTime + 1);
 
 	//TODO:: currently storageNodeInsertion will cause proper placement, but segfault in routing
 	//TODO:: No storage node insertion causes improper binding in placement
-	//This occurs with other schedulers as well when running dilution assays
-	int dropsInStorage = storageNodeInsertion(arch, dag, delays, StartTimes);
+	storageNodeInsertion(arch, dag, delays, StartTimes);
 
 	bindResources(arch, dag, delays, StartTimes, scheduleTime + 1);
 	cout<<" LPSOLVE TS:  "<<scheduleTime<<flush<<endl;
