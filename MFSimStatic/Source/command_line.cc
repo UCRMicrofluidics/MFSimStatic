@@ -43,6 +43,7 @@ CmdLine::CmdLine()
 	sKeys.push_back("FPPCS"); sDescrips.push_back("List Scheduling for FPPC Design"); sEnums.push_back(FPPC_S);
 	sKeys.push_back("FPPCPS"); sDescrips.push_back("Path Scheduling for Field-Programmable, Pin-Constrained Design"); sEnums.push_back(FPPC_PATH_S);
 	sKeys.push_back("RTELS"); sDescrips.push_back("Real-Time Evaluation List Scheduling"); sEnums.push_back(RT_EVAL_LIST_S);
+	sKeys.push_back("ILPS"); sDescrips.push_back("Integer Linear Programming Scheduler"); sEnums.push_back(ILP_S);
 	//sKeys.push_back("X"); sDescrips.push_back("Add New Scheduling Method Here"); sEnums.push_back(NEW_S);
 
 	// Create library for placers

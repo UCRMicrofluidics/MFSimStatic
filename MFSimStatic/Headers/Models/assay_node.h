@@ -123,6 +123,7 @@ class AssayNode : public Entity
 		friend class ListScheduler;
 		friend class PathScheduler;
 		friend class FDLScheduler;
+		friend class ILPScheduler;
 
 		friend class GrissomFppcLEBinder;
 		friend class GrissomPathBinder;
