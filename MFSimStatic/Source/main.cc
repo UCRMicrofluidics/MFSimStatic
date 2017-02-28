@@ -45,7 +45,11 @@ int main(int argc, char **argv)
 	// to call the executable from the Java GUI. If you are merely running C++ from an
 	// IDE (e.g., Eclipse) with hardcoded simulations in the "sandbox" below, then set
 	// this variable to false to prevent the program from demanding command-line params.
-	boolean executedViaJavaGUI = false;
+	#ifdef WINDOWS
+		boolean executedViaJavaGUI = false;
+	#else
+		bool executedViaJavaGUI = false;
+	#endif
 
 	CmdLine cmdLine;
 	if (cmdLine.IsUsingCommandLine(argc))

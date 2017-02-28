@@ -24,9 +24,11 @@
 
 using namespace std;
 #include <iostream>
-
 #ifdef _WIN32
 	#include <Windows.h>
+#elif __APPLE__
+	#include <mach/clock.h>
+	#include <mach/mach.h>
 #else
 	#include <time.h>
 #endif
@@ -45,6 +47,10 @@ class ElapsedTimer
 		timespec lastTime;
 		timespec newTime;
 		timespec diffTime;
+		#ifdef __APPLE__
+			clock_serv_t cclock;
+			mach_timespec_t mts;
+		#endif
 	#endif
 
 		string operationName;
@@ -61,6 +67,7 @@ class ElapsedTimer
 		// Methods
 		void startTimer();
 		void endTimer();
+		void getAppleTime(timespec *time);
 		double getElapsedTimeNS();
 		void printElapsedTime();
 };

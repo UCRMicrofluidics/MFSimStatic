@@ -247,7 +247,7 @@ int CombinedPinMapper<WireRouterType>::calculateClosestElectrode(int e, const ve
 template< class WireRouterType>
 double  CombinedPinMapper<WireRouterType>::distance(int x1, int y1, int x2, int y2 )
 {
-	return sqrt( pow(x2 - x1, 2) + pow(y2 - y1, 2));
+	return sqrt( pow(x2 - x1, 2.0) + pow(y2 - y1, 2.0));
 }
 
 
