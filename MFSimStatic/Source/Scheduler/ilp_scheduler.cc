@@ -11,6 +11,9 @@
 #include <unistd.h>
 #define GetCurrentDir getcwd
 #endif
+#ifdef __linux__
+	#include <dlfcn.h>
+#endif
 
 ILPScheduler::ILPScheduler() {
 
@@ -2004,7 +2007,9 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	double Nvar[_get_Ncolumns(lp)];
 
 	(lp, PRESOLVE_ROWS + PRESOLVE_COLS + PRESOLVE_LINDEP, 0);
+
 	unsigned temp_solve = _solve(lp);
+
 
 	if (temp_solve == 0) {
 		cout << "successful OPTIMAL solve of LPSolve Model" << endl;
@@ -2022,21 +2027,26 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 		exit(1);
 	}
 
-	double scheduleTime = _get_objective(lp);
 
+	double scheduleTime = _get_objective(lp);
 	//getting the variables of the model, will be used to perform framework details
 	_get_variables(lp, Nvar);
+
+
+
 
 
 	// establish start times for set timing
 	vector<double> StartTimes; //operations start times vector
 	int startIndex = 0;
+
 	for (int i = 0; i < _get_Ncolumns(lp); i++) {
 		if(string(_get_col_name(lp, i+1)) == "s1")
-		{
-			startIndex = i;
-			break;
-		}
+
+	{
+		startIndex = i;
+		break;
+	}
 	}
 
 	for(unsigned i = startIndex; i < startIndex + dag->allNodes.size(); i++)
@@ -2060,6 +2070,7 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	bindResources(arch, dag, delays, StartTimes, scheduleTime + 1);
 	cout<<" LPSOLVE TS:  "<<scheduleTime<<flush<<endl;
 	//cerr<<"LPSOLVE TS: "<<scheduleTime<<flush<<endl; //KNLO Debug
+
 	_delete_lp(lp);
 
 	//dag->PrintSchedule(); //KNLO Debug

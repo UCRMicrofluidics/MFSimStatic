@@ -39,7 +39,7 @@
 #include "../Headers/Scheduler/genet_scheduler.h"
 #include "../Headers/Scheduler/list_scheduler.h"
 #include "../Headers/Scheduler/path_scheduler.h"
-#include "../headers/Scheduler/ilp_scheduler.h"
+#include "../Headers/Scheduler/ilp_scheduler.h"
 #include "../Headers/Scheduler/scheduler.h"
 
 #include "../Headers/Placer/grissom_fppc_left_edge_binder.h"
