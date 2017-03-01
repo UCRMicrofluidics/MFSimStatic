@@ -38,6 +38,7 @@ Setting up Windows Environment (gcc & gdb):
 	- [VIDEO_HELP]: http://www.youtube.com/watch?v=BbBI65fyvu4#t=1m22s
 	- Download latest repository (http://sourceforge.net/projects/mingw/files/latest/download?source=files)
 	- Ensure that the C++ compiler is installed (other options are optional)
+2b.) [MACOS] Make sure Developer Tools are installed: enter either 'gcc' or 'make' into the Terminal application and install when prompted or install through Xcode.
 3.) [WINDOWS] Adjust system environmental variables:
 	- Note: Following steps may be slightly different on various Windows versions
 		- Open your Windows Control Panel
@@ -107,17 +108,20 @@ Setting up Eclipse Projects:
 	- Expland the "C/C++" folder, select "C++ Project" and click "Next"
 	- Give it a "Project name" of "MFSimStatic" (ignore warning, this will cause it to automatically import the existing files)
 	- For "Project type", select "Executable->Empty Project"
-	- For "Toolchains", select "MinGW GCC"
+	- For "Toolchains", select "MinGW GCC" (windows), "MAC OS GCC" (macos), or "Linux GCC" (linux)
 	- Click "Finish"
 	- When it asks to open the associated perspective, click "Yes"
 13.) Add references for timer library:
 	- [VIDEO_HELP]: http://www.youtube.com/watch?v=BbBI65fyvu4#t=20m50s
 	- Right click on the "MFSimStatic" C++ project in the Project Explorer
-	- On the menu that pops up, click "Properties->C/C++ Build->Settings->MinGW C++ Linker->Libraries"
+	- On the menu that pops up, click "Properties->C/C++ Build->Settings
+    - Click on the C++ Linker option (MinGW for windows, etc)
 		- Make sure the "[All configurations]" is selected for "Configurations"
 		- [WINDOWS] Add "winmm" to the "Libraries(-l) input box
-		- [LINUX] Add "rt" to the "Libraries(-l) input box) 
-	- This will remove undefined reference errors to 'timeBeginPeriod...' (Windows) or 'clock_gettime' (Linux) 
+		- [LINUX] Add "rt" and "dl" to the "Libraries(-l) input box)
+        - [MACOS] Add "-stdlib=libstdc++" to the "Miscellaneous" input box 
+	- This will remove undefined reference errors to 'timeBeginPeriod...' (Windows) or 'clock_gettime' (Linux)
+    - [MACOS] - Click on the C++ Compiler section and add "-stdlib=libstdc++" to the "other flags" entry box.
 
 
 

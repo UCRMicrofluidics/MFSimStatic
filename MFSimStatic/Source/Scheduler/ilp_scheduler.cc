@@ -1,5 +1,8 @@
 #include "../../Headers/Scheduler/ilp_scheduler.h"
+#include "../../lp_lib.h"
+#include "../../Headers/Util/util.h"
 #include <cstring>
+#include <errno.h>
 #include <stdio.h>  /* defines FILENAME_MAX */
 #ifdef WINDOWS
 #include <direct.h>
@@ -7,6 +10,9 @@
 #else
 #include <unistd.h>
 #define GetCurrentDir getcwd
+#endif
+#ifdef __linux__
+	#include <dlfcn.h>
 #endif
 
 ILPScheduler::ILPScheduler() {
@@ -287,8 +293,8 @@ void ILPScheduler::setVarVals(DmfbArch * arch, DAG* dag,
 	string ParamV = "param V, integer, >=0, default ";
 	string ParamT = "param T, integer, >= 0, default ";
 
-	fs << ParamV << itoa(varVals.first, buffer, 10) << ";" << "\n" << "\n";
-	fs << ParamT <<itoa(varVals.second, buffer2, 10) << ";" << "\n" << "\n";
+	fs << ParamV << Util::itoa(varVals.first, buffer, 10) << ";" << "\n" << "\n";
+	fs << ParamT <<Util::itoa(varVals.second, buffer2, 10) << ";" << "\n" << "\n";
 
 	fs
 			<< "#M is a large constant used for indicator variable in storage restrictions"
@@ -304,51 +310,51 @@ void ILPScheduler::setVarVals(DmfbArch * arch, DAG* dag,
 
 	for (unsigned i = 1; i < varVals.first + 1; i++) {
 		char buffer[5];
-		fs << "var s" << itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
+		fs << "var s" << Util::itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
 	}
 
 	fs << "\n" << "#Num Mix @ j variables" << "\n";
 	for (unsigned i = 0; i < varVals.second + 1; i++) {
 		char buffer[5];
-		fs << "var nm" << itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
+		fs << "var nm" << Util::itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
 	}
 
 	fs << "\n" << "#Num Detect @ j variables" << "\n";
 	for (unsigned i = 0; i < varVals.second + 1; i++) {
 		char buffer[5];
-		fs << "var nd" << itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
+		fs << "var nd" << Util::itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
 	}
 
 	fs << "\n" << "#Num Heat @ j variables" << "\n";
 	for (unsigned i = 0; i < varVals.second + 1; i++) {
 		char buffer[5];
-		fs << "var nh" << itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
+		fs << "var nh" << Util::itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
 	}
 
 	fs << "\n" << "#Num Split @ j variables" << "\n";
 	for (unsigned i = 0; i < varVals.second + 1; i++) {
 		char buffer[5];
-		fs << "var nsplit" << itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
+		fs << "var nsplit" << Util::itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
 	}
 
 	fs << "\n" << "#Num Store @ j variables" << "\n";
 	for (unsigned i = 0; i < varVals.second + 1; i++) {
 		char buffer[5];
-		fs << "var ns" << itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
+		fs << "var ns" << Util::itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
 	}
 	fs << "\n";
 
 	//End Times
 	for (unsigned i = 1; i < varVals.first + 1; i++) {
 		char buffer[5];
-		fs << "var end" << itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
+		fs << "var end" << Util::itoa(i, buffer, 10) << ", integer, >= 0;" << "\n";
 	}
 	fs << "\n";
 
 	for (unsigned i = 1; i < varVals.first + 1; i++) {
 		char buffer[5];
-		fs << "s.t. a" << itoa(i, buffer, 10) << ": sum{j in 0..T} x["
-				<< itoa(i, buffer, 10) << ",j] = 1;" << "\n";
+		fs << "s.t. a" << Util::itoa(i, buffer, 10) << ": sum{j in 0..T} x["
+				<< Util::itoa(i, buffer, 10) << ",j] = 1;" << "\n";
 	}
 	fs << "\n";
 
@@ -356,8 +362,8 @@ void ILPScheduler::setVarVals(DmfbArch * arch, DAG* dag,
 	fs << "#start time si = sum from j =1 to maxTS, j*x[i,j]" << "\n";
 	for (unsigned i = 1; i < varVals.first + 1; i++) {
 		char buffer[5];
-		fs << "s.t. b" << itoa(i, buffer, 10) << ": s" << itoa(i, buffer, 10)
-				<< " = sum{j in 0..T} (j*x[" << itoa(i, buffer, 10) << ",j]);"
+		fs << "s.t. b" << Util::itoa(i, buffer, 10) << ": s" << Util::itoa(i, buffer, 10)
+				<< " = sum{j in 0..T} (j*x[" << Util::itoa(i, buffer, 10) << ",j]);"
 				<< "\n";
 	}
 	fs << "\n";
@@ -368,9 +374,9 @@ void ILPScheduler::setVarVals(DmfbArch * arch, DAG* dag,
 		char buffer[5];
 		char buffer2[5];
 
-		fs << "s.t. fin" << itoa(i, buffer, 10) << ": end"
-				<< itoa(i, buffer, 10) << " = s" << itoa(i, buffer, 10) << " + "
-				<< itoa(delays.at(i - 1).delay, buffer2, 10) << ";" << "\n";
+		fs << "s.t. fin" << Util::itoa(i, buffer, 10) << ": end"
+				<< Util::itoa(i, buffer, 10) << " = s" << Util::itoa(i, buffer, 10) << " + "
+				<< Util::itoa(delays.at(i - 1).delay, buffer2, 10) << ";" << "\n";
 	}
 	fs << "\n";
 }
@@ -594,15 +600,15 @@ void ILPScheduler::setDependent(DmfbArch* arch, DAG* dag,
 			char buffer1[5];
 			char buffer2[5];
 			char buffer3[5];
-			fs << "s.t. c" << itoa(count, buffer1, 10) << " : s"
-					<< itoa(DepCons.at(i).nodeLocation + 1, buffer2, 10) << " >= s"
-					<< itoa(DepCons.at(i).parentLocation.at(j) + 1, buffer3, 10)
+			fs << "s.t. c" << Util::itoa(count, buffer1, 10) << " : s"
+					<< Util::itoa(DepCons.at(i).nodeLocation + 1, buffer2, 10) << " >= s"
+					<< Util::itoa(DepCons.at(i).parentLocation.at(j) + 1, buffer3, 10)
 					<< "+";
 			for (unsigned k = 0; k < delays.size(); k++)
 				if (dag->allNodes.at(DepCons.at(i).parentLocation.at(j))->id
 						== (int)delays.at(k).location) {
 					char buffer4[5];
-					fs << itoa(delays.at(k).delay, buffer4, 10) << ";" << "\n"; //Previously
+					fs << Util::itoa(delays.at(k).delay, buffer4, 10) << ";" << "\n"; //Previously
 				}
 			count++;
 		}
@@ -645,8 +651,8 @@ void ILPScheduler::setMixRestrict(DmfbArch * arch, DAG* dag,
 		for (unsigned i = 0; i <= MaxTS; i++) {
 			for (unsigned j = 0; j < MixRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(MixRestricts.locations.at(j).first, buffer1, 10)
-						<< "," << itoa(i, buffer2, 10) << "]+";
+						<< Util::itoa(MixRestricts.locations.at(j).first, buffer1, 10)
+						<< "," << Util::itoa(i, buffer2, 10) << "]+";
 			}
 		}
 		fs << "0;" << "\n";
@@ -655,12 +661,12 @@ void ILPScheduler::setMixRestrict(DmfbArch * arch, DAG* dag,
 		unsigned count = 0;
 		char buffer1[5], buffer2[5], buffer3[5];
 		for (unsigned i = 0; i < MaxTS; i++) {
-			fs << "s.t. MIX" << itoa(count, buffer1, 10) << ": nm"
-					<< itoa(i, buffer1, 10) << " = ";
+			fs << "s.t. MIX" << Util::itoa(count, buffer1, 10) << ": nm"
+					<< Util::itoa(i, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < MixRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(MixRestricts.locations.at(j).first, buffer2, 10)
-						<< "," << itoa(i, buffer3, 10) << "]+";
+						<< Util::itoa(MixRestricts.locations.at(j).first, buffer2, 10)
+						<< "," << Util::itoa(i, buffer3, 10) << "]+";
 			}
 			fs << "0;" << "\n";
 			count++;
@@ -668,40 +674,40 @@ void ILPScheduler::setMixRestrict(DmfbArch * arch, DAG* dag,
 	} else {
 		for (unsigned i = 0; i < MaxTS; i++) {
 			char buffer1[5], buffer2[5], buffer3[5];
-			fs << "s.t. MIX" << itoa(i, buffer1, 10) << ": nm"
-					<< itoa(i, buffer1, 10) << " = ";
+			fs << "s.t. MIX" << Util::itoa(i, buffer1, 10) << ": nm"
+					<< Util::itoa(i, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < MixRestricts.locations.size(); j++) {
 				if (i < MixRestricts.locations.at(j).second) {
 					if (j != MixRestricts.locations.size() - 1) {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												MixRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 						} else {
 							fs << "x["
-									<< itoa(MixRestricts.locations.at(j).first,
+									<< Util::itoa(MixRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(0, buffer3, 10) << "]+";
+									<< Util::itoa(0, buffer3, 10) << "]+";
 						}
 					} else {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												MixRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 							fs << "0;" << "\n";
 						} else {
 							fs << "x["
-									<< itoa(MixRestricts.locations.at(j).first,
+									<< Util::itoa(MixRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(0, buffer3, 10) << "]+";
+									<< Util::itoa(0, buffer3, 10) << "]+";
 							fs << "0;" << "\n";
 						}
 					}
@@ -711,18 +717,18 @@ void ILPScheduler::setMixRestrict(DmfbArch * arch, DAG* dag,
 								k > i - MixRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(MixRestricts.locations.at(j).first,
+									<< Util::itoa(MixRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 					} else {
 						for (unsigned k = i;
 								k > i - MixRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(MixRestricts.locations.at(j).first,
+									<< Util::itoa(MixRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 						fs << "0;" << "\n";
 					}
@@ -765,8 +771,8 @@ void ILPScheduler::setDetectRestrict(DmfbArch* arch, DAG* dag,
 		for (unsigned i = 0; i <= MaxTS; i++) {
 			for (unsigned j = 0; j < DetectRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(DetectRestricts.locations.at(j).first, buffer1,
-								10) << "," << itoa(i, buffer2, 10) << "]+";
+						<< Util::itoa(DetectRestricts.locations.at(j).first, buffer1,
+								10) << "," << Util::itoa(i, buffer2, 10) << "]+";
 			}
 		}
 		fs << "0;" << "\n";
@@ -776,12 +782,12 @@ void ILPScheduler::setDetectRestrict(DmfbArch* arch, DAG* dag,
 		unsigned count = 0;
 		char buffer1[5], buffer2[5], buffer3[5];
 		for (unsigned i = 0; i < MaxTS; i++) {
-			fs << "s.t. DET" << itoa(count, buffer1, 10) << ": nd"
-					<< itoa(i, buffer1, 10) << " = ";
+			fs << "s.t. DET" << Util::itoa(count, buffer1, 10) << ": nd"
+					<< Util::itoa(i, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < DetectRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(DetectRestricts.locations.at(j).first, buffer2,
-								10) << "," << itoa(i, buffer3, 10) << "]+";
+						<< Util::itoa(DetectRestricts.locations.at(j).first, buffer2,
+								10) << "," << Util::itoa(i, buffer3, 10) << "]+";
 			}
 			fs << "0;" << "\n";
 			count++;
@@ -789,42 +795,42 @@ void ILPScheduler::setDetectRestrict(DmfbArch* arch, DAG* dag,
 	} else {
 		for (unsigned i = 0; i < MaxTS; i++) {
 			char buffer1[5], buffer2[5], buffer3[5];
-			fs << "s.t. DET" << itoa(i, buffer1, 10) << ": nd"
-					<< itoa(i, buffer1, 10) << " = ";
+			fs << "s.t. DET" << Util::itoa(i, buffer1, 10) << ": nd"
+					<< Util::itoa(i, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < DetectRestricts.locations.size(); j++) {
 				if (i < DetectRestricts.locations.at(j).second) {
 					if (j != DetectRestricts.locations.size() - 1) {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												DetectRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 						} else {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											DetectRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(0, buffer3, 10) << "]+";
+									<< Util::itoa(0, buffer3, 10) << "]+";
 						}
 					} else {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												DetectRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 							fs << "0;" << "\n";
 						} else {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											DetectRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(0, buffer3, 10) << "]+";
+									<< Util::itoa(0, buffer3, 10) << "]+";
 							fs << "0;" << "\n";
 						}
 					}
@@ -834,20 +840,20 @@ void ILPScheduler::setDetectRestrict(DmfbArch* arch, DAG* dag,
 								k > i - DetectRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											DetectRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 					} else {
 						for (unsigned k = i;
 								k > i - DetectRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											DetectRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 						fs << "0;" << "\n";
 					}
@@ -889,8 +895,8 @@ void ILPScheduler::setHeatRestrict(DmfbArch* arch, DAG* dag,
 		for (unsigned i = 0; i <= MaxTS; i++) {
 			for (unsigned j = 0; j < HeatRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(HeatRestricts.locations.at(j).first, buffer1,
-								10) << "," << itoa(i, buffer2, 10) << "]+";
+						<< Util::itoa(HeatRestricts.locations.at(j).first, buffer1,
+								10) << "," << Util::itoa(i, buffer2, 10) << "]+";
 			}
 		}
 		fs << "0;" << "\n";
@@ -899,12 +905,12 @@ void ILPScheduler::setHeatRestrict(DmfbArch* arch, DAG* dag,
 		unsigned count = 0;
 		char buffer1[5], buffer2[5], buffer3[5];
 		for (unsigned i = 0; i < MaxTS; i++) {
-			fs << "s.t. HEAT" << itoa(count, buffer1, 10) << ": nh"
-					<< itoa(count, buffer1, 10) << " = ";
+			fs << "s.t. HEAT" << Util::itoa(count, buffer1, 10) << ": nh"
+					<< Util::itoa(count, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < HeatRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(HeatRestricts.locations.at(j).first, buffer2,
-								10) << "," << itoa(i, buffer3, 10) << "]+";
+						<< Util::itoa(HeatRestricts.locations.at(j).first, buffer2,
+								10) << "," << Util::itoa(i, buffer3, 10) << "]+";
 			}
 			fs << "0;" << "\n";
 			count++;
@@ -913,40 +919,40 @@ void ILPScheduler::setHeatRestrict(DmfbArch* arch, DAG* dag,
 		for (unsigned i = 0; i < MaxTS; i++) {
 			char buffer1[5], buffer2[5], buffer3[5];
 
-			fs << "s.t. Heat" << itoa(i, buffer1, 10) << ": nh"
-					<< itoa(i, buffer1, 10) << " = ";
+			fs << "s.t. Heat" << Util::itoa(i, buffer1, 10) << ": nh"
+					<< Util::itoa(i, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < HeatRestricts.locations.size(); j++) {
 				if (i < HeatRestricts.locations.at(j).second) {
 					if (j != HeatRestricts.locations.size() - 1) {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												HeatRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 						} else {
 							fs << "x["
-									<< itoa(HeatRestricts.locations.at(j).first,
+									<< Util::itoa(HeatRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(0, buffer3, 10) << "]+";
+									<< Util::itoa(0, buffer3, 10) << "]+";
 						}
 					} else {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												HeatRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 							fs << "0;" << "\n";
 						} else {
 							fs << "x["
-									<< itoa(HeatRestricts.locations.at(j).first,
+									<< Util::itoa(HeatRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(0, buffer3, 10) << "]+";
+									<< Util::itoa(0, buffer3, 10) << "]+";
 							fs << "0;" << "\n";
 						}
 					}
@@ -956,18 +962,18 @@ void ILPScheduler::setHeatRestrict(DmfbArch* arch, DAG* dag,
 								k > i - HeatRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(HeatRestricts.locations.at(j).first,
+									<< Util::itoa(HeatRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 					} else {
 						for (unsigned k = i;
 								k > i - HeatRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(HeatRestricts.locations.at(j).first,
+									<< Util::itoa(HeatRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 						fs << "0;" << "\n";
 					}
@@ -1038,38 +1044,38 @@ void ILPScheduler::setInputRestrict(DmfbArch* arch, DAG* dag,
 		if (restricts.at(i).locations.size() == 1)// || restricts.at(i).delay < 1)
 				{
 			char buffer1[5], buffer2[5], buffer3[5], buffer4[5];
-			fs << "s.t. INP" << itoa(count, buffer1, 10) << ": ";
+			fs << "s.t. INP" << Util::itoa(count, buffer1, 10) << ": ";
 			for (unsigned j = 0; j < MaxTS; j++) {
 				for (unsigned k = 0; k < restricts.at(i).locations.size();
 						k++) {
 					fs << "x["
-							<< itoa(restricts.at(i).locations.at(k), buffer2,
-									10) << "," << itoa(j, buffer3, 10) << "]+";
+							<< Util::itoa(restricts.at(i).locations.at(k), buffer2,
+									10) << "," << Util::itoa(j, buffer3, 10) << "]+";
 				}
 			}
 			count = count + 1;
-			fs << "0 <= " << itoa(restricts.at(i).maximumOf, buffer4, 10) << ";"
+			fs << "0 <= " << Util::itoa(restricts.at(i).maximumOf, buffer4, 10) << ";"
 					<< "\n";
 		} else if (restricts.at(i).delay < 1) {
 			fs << "\n" << "#out size less one why doing this?" << "\n";
 			unsigned count = 0;
 			char buffer1[5], buffer2[5], buffer3[5], buffer4[5];
 			for (unsigned j = 0; j < MaxTS; j++) {
-				fs << "s.t. INP" << itoa(count, buffer1, 10) << ": ";
+				fs << "s.t. INP" << Util::itoa(count, buffer1, 10) << ": ";
 				for (unsigned k = 0; k < restricts.at(i).locations.size();
 						k++) {
 					fs << "x["
-							<< itoa(restricts.at(i).locations.at(k), buffer2,
-									10) << "," << itoa(j, buffer3, 10) << "]+";
+							<< Util::itoa(restricts.at(i).locations.at(k), buffer2,
+									10) << "," << Util::itoa(j, buffer3, 10) << "]+";
 				}
-				fs << "0 <= " << itoa(restricts.at(i).maximumOf, buffer4, 10) << ";"
+				fs << "0 <= " << Util::itoa(restricts.at(i).maximumOf, buffer4, 10) << ";"
 						<< "\n";
 				count++;
 			}
 		} else {
 			for (unsigned j = 0; j < MaxTS; j++) {
 				char buffer1[5], buffer2[5], buffer3[5], buffer4[5];
-				fs << "s.t. INP" << itoa(count, buffer1, 10) << ": ";
+				fs << "s.t. INP" << Util::itoa(count, buffer1, 10) << ": ";
 				for (unsigned k = 0; k < restricts.at(i).locations.size();
 						k++) {
 					if (j < restricts.at(i).delay) {
@@ -1077,36 +1083,36 @@ void ILPScheduler::setInputRestrict(DmfbArch* arch, DAG* dag,
 							if (j != 0) {
 								for (int l = j; l > -1; l--) {
 									fs << "x["
-											<< itoa(
+											<< Util::itoa(
 													restricts.at(i).locations.at(
 															k), buffer2, 10)
-											<< "," << itoa(l, buffer3, 10)
+											<< "," << Util::itoa(l, buffer3, 10)
 											<< "]+";
 								}
 							} else if (j == 0) {
 								fs << "x["
-										<< itoa(restricts.at(i).locations.at(k),
+										<< Util::itoa(restricts.at(i).locations.at(k),
 												buffer2, 10) << ",0]+";
 							}
 						} else {
 							if (j != 0) {
 								for (int l = j; l > -1; l--) {
 									fs << "x["
-											<< itoa(
+											<< Util::itoa(
 													restricts.at(i).locations.at(
 															k), buffer2, 10)
-											<< "," << itoa(l, buffer3, 10)
+											<< "," << Util::itoa(l, buffer3, 10)
 											<< "]+";
 								}
 								fs << "0 <= "
-										<< itoa(restricts.at(i).maximumOf, buffer4,
+										<< Util::itoa(restricts.at(i).maximumOf, buffer4,
 												10) << ";" << "\n";
 							} else if (j == 0) {
 								fs << "x["
-										<< itoa(restricts.at(i).locations.at(k),
+										<< Util::itoa(restricts.at(i).locations.at(k),
 												buffer2, 10) << ",0]+";
 								fs << "0 <= "
-										<< itoa(restricts.at(i).maximumOf, buffer4,
+										<< Util::itoa(restricts.at(i).maximumOf, buffer4,
 												10) << ";" << "\n";
 							}
 						}
@@ -1115,20 +1121,20 @@ void ILPScheduler::setInputRestrict(DmfbArch* arch, DAG* dag,
 							for (unsigned l = j; l > j - restricts.at(i).delay;
 									l--) {
 								fs << "x["
-										<< itoa(restricts.at(i).locations.at(k),
+										<< Util::itoa(restricts.at(i).locations.at(k),
 												buffer2, 10) << ","
-										<< itoa(l, buffer3, 10) << "]+";
+										<< Util::itoa(l, buffer3, 10) << "]+";
 							}
 						} else {
 							for (unsigned l = j; l > j - restricts.at(i).delay;
 									l--) {
 								fs << "x["
-										<< itoa(restricts.at(i).locations.at(k),
+										<< Util::itoa(restricts.at(i).locations.at(k),
 												buffer2, 10) << ","
-										<< itoa(l, buffer3, 10) << "]+";
+										<< Util::itoa(l, buffer3, 10) << "]+";
 							}
 							fs << "0 <= "
-									<< itoa(restricts.at(i).maximumOf, buffer4, 10)
+									<< Util::itoa(restricts.at(i).maximumOf, buffer4, 10)
 									<< ";" << "\n";
 						}
 					}
@@ -1173,8 +1179,8 @@ void ILPScheduler::setSplitRestrict(DmfbArch* arch, DAG* dag,
 		for (unsigned i = 0; i <= MaxTS; i++) {
 			for (unsigned j = 0; j < SplitRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(SplitRestricts.locations.at(j).first, buffer1,
-								10) << "," << itoa(i, buffer2, 10) << "]+";
+						<< Util::itoa(SplitRestricts.locations.at(j).first, buffer1,
+								10) << "," << Util::itoa(i, buffer2, 10) << "]+";
 			}
 		}
 		fs << "0;" << "\n";
@@ -1183,12 +1189,12 @@ void ILPScheduler::setSplitRestrict(DmfbArch* arch, DAG* dag,
 		unsigned count = 0;
 		char buffer1[5], buffer2[5], buffer3[5];
 		for (unsigned i = 0; i < MaxTS; i++) {
-			fs << "s.t. SPLIT" << itoa(count, buffer1, 10) << ": nsplit"
-					<< itoa(count, buffer1, 10) << " = ";
+			fs << "s.t. SPLIT" << Util::itoa(count, buffer1, 10) << ": nsplit"
+					<< Util::itoa(count, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < SplitRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(SplitRestricts.locations.at(j).first, buffer2,
-								10) << "," << itoa(i, buffer3, 10) << "]+";
+						<< Util::itoa(SplitRestricts.locations.at(j).first, buffer2,
+								10) << "," << Util::itoa(i, buffer3, 10) << "]+";
 			}
 			fs << "0;" << "\n";
 			count++;
@@ -1196,22 +1202,22 @@ void ILPScheduler::setSplitRestrict(DmfbArch* arch, DAG* dag,
 	} else {
 		for (unsigned i = 0; i < MaxTS; i++) {
 			char buffer1[5], buffer2[5], buffer3[5];
-			fs << "s.t. Split" << itoa(i, buffer1, 10) << ": nsplit"
-					<< itoa(i, buffer1, 10) << " = ";
+			fs << "s.t. Split" << Util::itoa(i, buffer1, 10) << ": nsplit"
+					<< Util::itoa(i, buffer1, 10) << " = ";
 			for (unsigned j = 0; j < SplitRestricts.locations.size(); j++) {
 				if (i < SplitRestricts.locations.at(j).second) {
 					if (j != SplitRestricts.locations.size() - 1) {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												SplitRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 						} else if (i == 0) {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											SplitRestricts.locations.at(j).first,
 											buffer2, 10) << ",0]+";
 						}
@@ -1219,15 +1225,15 @@ void ILPScheduler::setSplitRestrict(DmfbArch* arch, DAG* dag,
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												SplitRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 							fs << "0;" << "\n";
 						} else if (i == 0) {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											SplitRestricts.locations.at(j).first,
 											buffer2, 10) << ",0]+";
 							fs << "0;" << "\n";
@@ -1239,20 +1245,20 @@ void ILPScheduler::setSplitRestrict(DmfbArch* arch, DAG* dag,
 								k > i - SplitRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											SplitRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 					} else {
 						for (unsigned k = i;
 								k > i - SplitRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(
+									<< Util::itoa(
 											SplitRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 						fs << "0;" << "\n";
 					}
@@ -1301,23 +1307,23 @@ void ILPScheduler::setOutputRestrict(DmfbArch* arch, DAG* dag,
 		for (unsigned i = 0; i <= MaxTS; i++) {
 			for (unsigned j = 0; j < OutRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(OutRestricts.locations.at(j).first, buffer1, 10)
-						<< "," << itoa(i, buffer2, 10) << "]+";
+						<< Util::itoa(OutRestricts.locations.at(j).first, buffer1, 10)
+						<< "," << Util::itoa(i, buffer2, 10) << "]+";
 			}
 		}
-		fs << "0 <= " << itoa(OutRestricts.maximumOf, buffer3, 10) << ";" << "\n";
+		fs << "0 <= " << Util::itoa(OutRestricts.maximumOf, buffer3, 10) << ";" << "\n";
 	} else if (OutRestricts.locations.at(0).second < 1) {
 		fs << "\n" << "#out size less one why doing this?" << "\n";
 		unsigned count = 0;
 		char buffer1[5], buffer2[5], buffer3[5], buffer4[5];
 		for (unsigned i = 0; i < MaxTS; i++) {
-			fs << "s.t. OUT" << itoa(count, buffer1, 10) << ": ";
+			fs << "s.t. OUT" << Util::itoa(count, buffer1, 10) << ": ";
 			for (unsigned j = 0; j < OutRestricts.locations.size(); j++) {
 				fs << "x["
-						<< itoa(OutRestricts.locations.at(j).first, buffer2, 10)
-						<< "," << itoa(i, buffer3, 10) << "]+";
+						<< Util::itoa(OutRestricts.locations.at(j).first, buffer2, 10)
+						<< "," << Util::itoa(i, buffer3, 10) << "]+";
 			}
-			fs << "0 <= " << itoa(OutRestricts.maximumOf, buffer4, 10) << ";"
+			fs << "0 <= " << Util::itoa(OutRestricts.maximumOf, buffer4, 10) << ";"
 					<< "\n";
 			count++;
 		}
@@ -1325,41 +1331,41 @@ void ILPScheduler::setOutputRestrict(DmfbArch* arch, DAG* dag,
 		for (unsigned i = 0; i < MaxTS; i++) {
 			char buffer1[5], buffer2[5], buffer3[5], buffer4[5]; //buffer6[5], buffer7[5], buffer8[5], buffer9[5], buffer10[5];
 
-			fs << "s.t. Out" << itoa(i, buffer1, 10) << ": ";
+			fs << "s.t. Out" << Util::itoa(i, buffer1, 10) << ": ";
 			for (unsigned j = 0; j < OutRestricts.locations.size(); j++) {
 				if (i < OutRestricts.locations.at(j).second) {
 					if (j != OutRestricts.locations.size() - 1) {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												OutRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 						} else if (i == 0) {
 							fs << "x["
-									<< itoa(OutRestricts.locations.at(j).first,
+									<< Util::itoa(OutRestricts.locations.at(j).first,
 											buffer2, 10) << ",0]+";
 						}
 					} else {
 						if (i != 0) {
 							for (int k = i; k > -1; k--) {
 								fs << "x["
-										<< itoa(
+										<< Util::itoa(
 												OutRestricts.locations.at(j).first,
 												buffer2, 10) << ","
-										<< itoa(k, buffer3, 10) << "]+";
+										<< Util::itoa(k, buffer3, 10) << "]+";
 							}
 							fs << "0 <= "
-									<< itoa(OutRestricts.maximumOf, buffer4, 10)
+									<< Util::itoa(OutRestricts.maximumOf, buffer4, 10)
 									<< ";" << "\n";
 						} else if (i == 0) {
 							fs << "x["
-									<< itoa(OutRestricts.locations.at(j).first,
+									<< Util::itoa(OutRestricts.locations.at(j).first,
 											buffer2, 10) << ",0]+";
 							fs << "0 <= "
-									<< itoa(OutRestricts.maximumOf, buffer4, 10)
+									<< Util::itoa(OutRestricts.maximumOf, buffer4, 10)
 									<< ";" << "\n";
 						}
 					}
@@ -1369,20 +1375,20 @@ void ILPScheduler::setOutputRestrict(DmfbArch* arch, DAG* dag,
 								k > i - OutRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(OutRestricts.locations.at(j).first,
+									<< Util::itoa(OutRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
 					} else {
 						for (unsigned k = i;
 								k > i - OutRestricts.locations.at(j).second;
 								k--) {
 							fs << "x["
-									<< itoa(OutRestricts.locations.at(j).first,
+									<< Util::itoa(OutRestricts.locations.at(j).first,
 											buffer2, 10) << ","
-									<< itoa(k, buffer3, 10) << "]+";
+									<< Util::itoa(k, buffer3, 10) << "]+";
 						}
-						fs << "0 <= " << itoa(OutRestricts.maximumOf, buffer4, 10)
+						fs << "0 <= " << Util::itoa(OutRestricts.maximumOf, buffer4, 10)
 								<< ";" << "\n";
 					}
 				}
@@ -1400,7 +1406,7 @@ void ILPScheduler::setStoreRestrictsUpd(DmfbArch * arch, DAG * dag,
 	for (unsigned t = 0; t < MaxTS; t++) //for each timestpe
 			{
 		char buff[5];
-		fs << "s.t. STORE" << itoa(t, buff, 10) << ": ns" << itoa(t, buff, 10)
+		fs << "s.t. STORE" << Util::itoa(t, buff, 10) << ": ns" << Util::itoa(t, buff, 10)
 				<< " = "
 						"(";
 		for (unsigned i = 0; i < Childs.size(); i++) //for each child
@@ -1411,7 +1417,7 @@ void ILPScheduler::setStoreRestrictsUpd(DmfbArch * arch, DAG * dag,
 
 				fs << " (";
 
-				char buffer[5], buffer1[5], buffer2[5], buffer3[5]; //buffers for itoa conversion
+				char buffer[5], buffer1[5], buffer2[5], buffer3[5]; //buffers for Util::itoa conversion
 				unsigned Jdelay = 0;
 
 				fs << " (";
@@ -1427,16 +1433,16 @@ void ILPScheduler::setStoreRestrictsUpd(DmfbArch * arch, DAG * dag,
 
 				for (unsigned j = 0; j <= Jdelay; j++) //TERM1: for (j = 0 up to  J - parents delay)
 						{
-					fs << "x[" << itoa(Childs.at(i).nodeLocation + 1, buffer, 10)
-							<< "," << itoa(j, buffer1, 10) << "] + "; //nodeLocation == parentLocationation, plus one accounts for  index from 0, index from 1 mismatch in lpsolve
+					fs << "x[" << Util::itoa(Childs.at(i).nodeLocation + 1, buffer, 10)
+							<< "," << Util::itoa(j, buffer1, 10) << "] + "; //nodeLocation == parentLocationation, plus one accounts for  index from 0, index from 1 mismatch in lpsolve
 				} // end for
 
 				fs << "0) - (";
 				for (unsigned k = 0; k <= t; k++) //for dependent child, go from time 0 to current time t
 						{
 					fs << "x["
-							<< itoa(Childs.at(i).parentLocation.at(ChildCount) + 1,
-									buffer2, 10) << "," << itoa(k, buffer3, 10)
+							<< Util::itoa(Childs.at(i).parentLocation.at(ChildCount) + 1,
+									buffer2, 10) << "," << Util::itoa(k, buffer3, 10)
 							<< "] + ";
 				} //end for
 				fs << "0) ) + ";
@@ -1462,36 +1468,36 @@ void ILPScheduler::setRestVarMaxs(DmfbArch * arch, DAG * dag, unsigned MaxTS,
 		if (dag->mixes.size() != 0) {
 			char buffer[5];
 			char buffer1[5];
-			fs << "s.t. MM" << itoa(i, buffer, 10) << ": nm"
-					<< itoa(i, buffer, 10) << "  <= "
-					<< itoa(MixMax, buffer1, 10) << ";" << "\n";
+			fs << "s.t. MM" << Util::itoa(i, buffer, 10) << ": nm"
+					<< Util::itoa(i, buffer, 10) << "  <= "
+					<< Util::itoa(MixMax, buffer1, 10) << ";" << "\n";
 		}
 		if (dag->detects.size() != 0) {
 			char buffer[5];
 			char buffer1[5];
-			fs << "s.t. MD" << itoa(i, buffer, 10) << ": nd"
-					<< itoa(i, buffer, 10) << "  <= "
-					<< itoa(DetectMax, buffer1, 10) << ";" << "\n";
+			fs << "s.t. MD" << Util::itoa(i, buffer, 10) << ": nd"
+					<< Util::itoa(i, buffer, 10) << "  <= "
+					<< Util::itoa(DetectMax, buffer1, 10) << ";" << "\n";
 		}
 		if (dag->heats.size() != 0) {
 			char buffer[5];
 			char buffer1[5];
-			fs << "s.t. MH" << itoa(i, buffer, 10) << ": nh"
-					<< itoa(i, buffer, 10) << "  <= "
-					<< itoa(HeatMax, buffer1, 10) << ";" << "\n";
+			fs << "s.t. MH" << Util::itoa(i, buffer, 10) << ": nh"
+					<< Util::itoa(i, buffer, 10) << "  <= "
+					<< Util::itoa(HeatMax, buffer1, 10) << ";" << "\n";
 		}
 		if (dag->splits.size() != 0) {
 			char buffer[5];
 			char buffer1[5];
-			fs << "s.t. MSPLIT" << itoa(i, buffer, 10) << ": nsplit"
-					<< itoa(i, buffer, 10) << "  <= "
-					<< itoa(SplitMax, buffer1, 10) << ";" << "\n";
+			fs << "s.t. MSPLIT" << Util::itoa(i, buffer, 10) << ": nsplit"
+					<< Util::itoa(i, buffer, 10) << "  <= "
+					<< Util::itoa(SplitMax, buffer1, 10) << ";" << "\n";
 		}
 		//storage addition
 		char buffer1[5], buffer2[5];
-		fs << "s.t. MS" << itoa(i, buffer1, 10) << ": (" << convertFloatToString(ratio)
-				<< " * ns" << itoa(i, buffer1, 10) << ") <= "
-				<< itoa(MixMax, buffer2, 10) << ";" << "\n";
+		fs << "s.t. MS" << Util::itoa(i, buffer1, 10) << ": (" << convertFloatToString(ratio)
+				<< " * ns" << Util::itoa(i, buffer1, 10) << ") <= "
+				<< Util::itoa(MixMax, buffer2, 10) << ";" << "\n";
 	}
 	fs << "\n";
 }
@@ -1513,23 +1519,23 @@ void ILPScheduler::setGeneralRestricts(DmfbArch * arch, DAG * dag, unsigned MaxT
 	for (unsigned i = 0; i < MaxTS; i++) {
 		char buffer[5];
 		char buffer1[5];
-		fs << "s.t. GEN" << itoa(i, buffer, 10) << ": ";
+		fs << "s.t. GEN" << Util::itoa(i, buffer, 10) << ": ";
 		if (mix_size != 0) {
-			fs << "nm" << itoa(i, buffer, 10) << " + ";
+			fs << "nm" << Util::itoa(i, buffer, 10) << " + ";
 		}
 		if (detect_size != 0) {
-			fs << "nd" << itoa(i, buffer, 10) << " + ";
+			fs << "nd" << Util::itoa(i, buffer, 10) << " + ";
 		}
 		if (heat_size != 0) {
-			fs << "nh" << itoa(i, buffer, 10) << " + ";
+			fs << "nh" << Util::itoa(i, buffer, 10) << " + ";
 		}
 		if (split_size != 0) {
-			fs << "nsplit" << itoa(i, buffer, 10) << " + ";
+			fs << "nsplit" << Util::itoa(i, buffer, 10) << " + ";
 		}
 
 		//storage addition
-		fs << "(" << convertFloatToString(ratio) << " * ns" << itoa(i, buffer, 10) << ") + ";
-		fs << "0 <= " << itoa(MixMax, buffer1, 10) << ";" << "\n";
+		fs << "(" << convertFloatToString(ratio) << " * ns" << Util::itoa(i, buffer, 10) << ") + ";
+		fs << "0 <= " << Util::itoa(MixMax, buffer1, 10) << ";" << "\n";
 	}
 	fs << "\n";
 }
@@ -1544,8 +1550,8 @@ void ILPScheduler::setObjective(unsigned NumOps, ofstream &fs) {
 	for (unsigned i = 1; i < NumOps + 1; i++) //this is the new way, using end times
 			{
 		char buffer[5];
-		fs << "s.t. e" << itoa(i, buffer, 10) << ": c >= end"
-				<< itoa(i, buffer, 10) << ";" << "\n";
+		fs << "s.t. e" << Util::itoa(i, buffer, 10) << ": c >= end"
+				<< Util::itoa(i, buffer, 10) << ";" << "\n";
 	}
 	fs << "\n";
 	fs << "solve;" << "\n";
@@ -1782,7 +1788,7 @@ int ILPScheduler::storageNodeInsertion(DmfbArch * arch, DAG * dag,
 			dag->InsertNode(pInsert.at(s), n, sInsert.at(s));
 			char buffer[5];
 			string stringer = "STORE";
-			string tempor = itoa(dropsInStorage, buffer, 10);
+			string tempor = Util::itoa(dropsInStorage, buffer, 10);
 			stringer.append(tempor);
 			sInsert.at(s)->name = stringer;
 			dropsInStorage++;
@@ -1921,9 +1927,71 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	//Initialize values
 	lprec * lp;
 
+	//Explicit linking of lpsolve library
+	//prototype functions defined and set to address
+	#if defined(__WIN32) || defined(WINDOWS)
+		HINSTANCE lpsolve;
+		delete_lp_func * _delete_lp;
+		read_XLI_func * _read_XLI;
+		set_timeout_func * _set_timeout;
+		get_timeout_func * _get_timeout;
+		get_Ncolumns_func * _get_Ncolumns;
+		solve_func * _solve;
+		get_objective_func * _get_objective;
+		get_variables_func * _get_variables;
+		get_col_name_func * _get_col_name;
+
+		lpsolve = LoadLibrary("lpsolve55.dll");
+
+		if (lpsolve == NULL) {
+			cerr << "Unable to load lpsolve shared library\n";
+			exit(1);
+		}
+
+		_delete_lp = (delete_lp_func *) GetProcAddress(lpsolve, "delete_lp");
+		_read_XLI = (read_XLI_func *) GetProcAddress(lpsolve, "read_XLI");
+		_set_timeout = (set_timeout_func *) GetProcAddress(lpsolve, "set_timeout");
+		_get_timeout = (get_timeout_func *) GetProcAddress(lpsolve, "get_timeout");
+		_get_Ncolumns = (get_Ncolumns_func *) GetProcAddress(lpsolve, "get_Ncolumns");
+		_solve = (solve_func *) GetProcAddress(lpsolve, "solve");
+		_get_objective = (get_objective_func *) GetProcAddress(lpsolve, "get_objective");
+		_get_variables = (get_variables_func *) GetProcAddress(lpsolve, "get_variables");
+		_get_col_name = (get_col_name_func *) GetProcAddress(lpsolve, "get_col_name");
+	// end explicit linking, use proto functions to point to functions in lp_lib
+	#else
+		void * lpsolve;
+		delete_lp_func * _delete_lp;
+		read_XLI_func * _read_XLI;
+		set_timeout_func * _set_timeout;
+		get_timeout_func * _get_timeout;
+		get_Ncolumns_func * _get_Ncolumns;
+		solve_func * _solve;
+		get_objective_func * _get_objective;
+		get_variables_func * _get_variables;
+		get_col_name_func * _get_col_name;
+
+		lpsolve = dlopen("lpsolve55.dll", RTLD_LAZY);
+
+		if (lpsolve == NULL) {
+			cerr << "Unable to load lpsolve shared library\n";
+			exit(1);
+		}
+
+		_delete_lp = (delete_lp_func *) dlsym(lpsolve, "delete_lp");
+		_read_XLI = (read_XLI_func *) dlsym(lpsolve, "read_XLI");
+		_set_timeout = (set_timeout_func *) dlsym(lpsolve, "set_timeout");
+		_get_timeout = (get_timeout_func *) dlsym(lpsolve, "get_timeout");
+		_get_Ncolumns = (get_Ncolumns_func *) dlsym(lpsolve, "get_Ncolumns");
+		_solve = (solve_func *) dlsym(lpsolve, "solve");
+		_get_objective = (get_objective_func *) dlsym(lpsolve, "get_objective");
+		_get_variables = (get_variables_func *) dlsym(lpsolve, "get_variables");
+		_get_col_name = (get_col_name_func *) dlsym(lpsolve, "get_col_name");
+	#endif
+
+
 	//Begin launching lp_solver//
 	//associate solver with mathprog language interface
-	lp = read_XLI("xli_MathProg", fname, NULL, "", IMPORTANT);
+	lp = _read_XLI("xli_MathProg", fname, NULL, "", IMPORTANT);
 	if (lp == NULL) {
 		fprintf(stderr, "Unable to read model\n");
 		return (1);
@@ -1932,14 +2000,16 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	delete fname;
 
 	int timeoutVal = 14400;
-	set_timeout(lp, timeoutVal); //sets timeout of model to 14400S (4 hours).
-	cerr<<"the timeout of lp is: "<<get_timeout(lp)<<" seconds"<<std::flush<<std::endl;
+	_set_timeout(lp, timeoutVal); //sets timeout of model to 14400S (4 hours).
+	cerr<<"the timeout of lp is: "<<_get_timeout(lp)<<" seconds"<<std::flush<<std::endl;
 
 	///////Solving the model//////////
-	double Nvar[get_Ncolumns(lp)];
+	double Nvar[_get_Ncolumns(lp)];
 
 	(lp, PRESOLVE_ROWS + PRESOLVE_COLS + PRESOLVE_LINDEP, 0);
-	unsigned temp_solve = solve(lp);
+
+	unsigned temp_solve = _solve(lp);
+
 
 	if (temp_solve == 0) {
 		cout << "successful OPTIMAL solve of LPSolve Model" << endl;
@@ -1957,21 +2027,26 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 		exit(1);
 	}
 
-	double scheduleTime = get_objective(lp);
 
+	double scheduleTime = _get_objective(lp);
 	//getting the variables of the model, will be used to perform framework details
-	get_variables(lp, Nvar);
+	_get_variables(lp, Nvar);
+
+
+
 
 
 	// establish start times for set timing
 	vector<double> StartTimes; //operations start times vector
 	int startIndex = 0;
-	for (int i = 0; i < get_Ncolumns(lp); i++) {
-		if(string(get_col_name(lp, i+1)) == "s1")
-		{
-			startIndex = i;
-			break;
-		}
+
+	for (int i = 0; i < _get_Ncolumns(lp); i++) {
+		if(string(_get_col_name(lp, i+1)) == "s1")
+
+	{
+		startIndex = i;
+		break;
+	}
 	}
 
 	for(unsigned i = startIndex; i < startIndex + dag->allNodes.size(); i++)
@@ -1995,7 +2070,8 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 	bindResources(arch, dag, delays, StartTimes, scheduleTime + 1);
 	cout<<" LPSOLVE TS:  "<<scheduleTime<<flush<<endl;
 	//cerr<<"LPSOLVE TS: "<<scheduleTime<<flush<<endl; //KNLO Debug
-	delete_lp(lp);
+
+	_delete_lp(lp);
 
 	//dag->PrintSchedule(); //KNLO Debug
 

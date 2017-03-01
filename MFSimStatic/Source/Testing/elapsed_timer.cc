@@ -80,6 +80,8 @@ void ElapsedTimer::startTimer()
 	 cout<<"Maximum resolution = "<<ptc.wPeriodMax<<endl;
 	 }*/
 	lastTime = calculateElapsedTime();
+#elif __APPLE__
+	getAppleTime(&lastTime);
 #else
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &lastTime);
 #endif
@@ -92,6 +94,9 @@ void ElapsedTimer::endTimer()
 {
 #ifdef _WIN32
 	newTime = calculateElapsedTime();
+#elif __APPLE__
+	getAppleTime(&newTime);
+	calculateElapsedTime();
 #else
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &newTime);
 	calculateElapsedTime();
@@ -156,3 +161,16 @@ unsigned int ElapsedTimer::calculateElapsedTime()
 	}
 #endif
 }
+
+#ifdef __APPLE__
+////////////////////////////////////////////////////////////////////
+// Gets the time on Apple OS
+////////////////////////////////////////////////////////////////////
+void ElapsedTimer::getAppleTime(timespec *time) {
+	host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+	clock_get_time(cclock, &mts);
+	mach_port_deallocate(mach_task_self(), cclock);
+	time->tv_sec = mts.tv_sec;
+	time->tv_nsec = mts.tv_nsec;
+}
+#endif
