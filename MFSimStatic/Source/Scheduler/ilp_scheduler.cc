@@ -1929,7 +1929,7 @@ unsigned long long ILPScheduler::schedule(DmfbArch *arch, DAG *dag) {
 
 	//Explicit linking of lpsolve library
 	//prototype functions defined and set to address
-	#ifdef WINDOWS
+	#if defined(__WIN32) || defined(WINDOWS)
 		HINSTANCE lpsolve;
 		delete_lp_func * _delete_lp;
 		read_XLI_func * _read_XLI;

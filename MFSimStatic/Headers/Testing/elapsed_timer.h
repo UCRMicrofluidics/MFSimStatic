@@ -67,7 +67,9 @@ class ElapsedTimer
 		// Methods
 		void startTimer();
 		void endTimer();
+#ifdef __APPLE__
 		void getAppleTime(timespec *time);
+#endif
 		double getElapsedTimeNS();
 		void printElapsedTime();
 };
