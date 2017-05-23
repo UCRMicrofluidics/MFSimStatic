@@ -122,7 +122,19 @@ Setting up Eclipse Projects:
         - [MACOS] Add "-stdlib=libstdc++" to the "Miscellaneous" input box 
 	- This will remove undefined reference errors to 'timeBeginPeriod...' (Windows) or 'clock_gettime' (Linux)
     - [MACOS] - Click on the C++ Compiler section and add "-stdlib=libstdc++" to the "other flags" entry box.
-
+14.) Add references for lpsolve library:
+	- [VIDEO_HELP]: NA
+	- Right click on the "MFSimStatic" C++ project in the Project Explorer
+	- On the menu that pops up, click "Properties->C/C++ Build->Settings->MinGW C++ Linker->Miscellaneous"
+		- Make sure the "[All configurations]" is selected for "Configurations"
+		- [WINDOWS/LINUX] Add path the lpsolve55/lib file (under MFSmStatic root) to other objects
+15.) Add references for lpsolve library:
+	- [VIDEO_HELP]: NA
+	- Right click on the "MFSimStatic" C++ project in the Project Explorer
+	- On the menu that pops up, click "Properties->C/C++ Build->Settings->MinGW C++ Linker->Miscellaneous"
+		- Make sure the "[All configurations]" is selected for "Configurations"
+		- [WINDOWS/LINUX] Modify the linker flags field to include the following: 
+		  "static-libgcc -static-libstdc++"
 
 
 Running your first Simulation:
