@@ -128,7 +128,7 @@ Setting up Eclipse Projects:
 	- On the menu that pops up, click "Properties->C/C++ Build->Settings->MinGW C++ Linker->Miscellaneous"
 		- Make sure the "[All configurations]" is selected for "Configurations"
 		- [WINDOWS/LINUX] Add path the lpsolve55/lib file (under MFSmStatic root) to other objects
-15.) Add references for lpsolve library:
+15.) Add stdlib and gcc linker flags:
 	- [VIDEO_HELP]: NA
 	- Right click on the "MFSimStatic" C++ project in the Project Explorer
 	- On the menu that pops up, click "Properties->C/C++ Build->Settings->MinGW C++ Linker->Miscellaneous"
